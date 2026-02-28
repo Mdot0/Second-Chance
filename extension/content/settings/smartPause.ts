@@ -21,23 +21,29 @@ export function computePauseDecision(
     return { delaySeconds: clampDelay(delay), reasons };
   }
 
-  if (context.toCount >= 3) {
-    delay += 3;
-    reasons.push("multiple recipients");
+  if (context.toCount >= 7) {
+    delay += 6;
+    reasons.push(`sending to ${context.toCount} people`);
+  } else if (context.toCount >= 4) {
+    delay += 4;
+    reasons.push(`sending to ${context.toCount} people`);
+  } else if (context.toCount >= 2) {
+    delay += 2;
+    reasons.push(`sending to ${context.toCount} people`);
   }
 
   if (context.hasAttachment) {
-    delay += 4;
-    reasons.push("attachment detected");
+    delay += 5;
+    reasons.push("attachment included");
   }
 
-  const haystack = `${context.subject} ${context.bodyText}`.toLowerCase();
-  const matchesKeyword = settings.keywords.some(
-    (keyword) => keyword.length > 0 && haystack.includes(keyword.toLowerCase())
+  const lowerHaystack = `${context.subject} ${context.bodyText}`.toLowerCase();
+  const matchedKeyword = settings.keywords.find(
+    (keyword) => keyword.length > 0 && lowerHaystack.includes(keyword.toLowerCase())
   );
-  if (matchesKeyword) {
-    delay += 4;
-    reasons.push("sensitive keyword");
+  if (matchedKeyword) {
+    delay += 5;
+    reasons.push(`keyword "${matchedKeyword}" detected`);
   }
 
   return { delaySeconds: clampDelay(delay), reasons };
