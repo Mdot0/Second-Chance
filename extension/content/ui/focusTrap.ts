@@ -7,16 +7,23 @@ function getFocusable(container: HTMLElement): HTMLElement[] {
     container.querySelectorAll<HTMLElement>(
       "button, [href], input, select, textarea, [tabindex]:not([tabindex='-1'])"
     )
-  ).filter((element) => !element.hasAttribute("disabled") && element.getAttribute("aria-hidden") !== "true");
+  ).filter(
+    (element) =>
+      !element.hasAttribute("disabled") &&
+      element.getAttribute("aria-hidden") !== "true" &&
+      element.tabIndex >= 0
+  );
 }
 
-export function createFocusTrap(
-  container: HTMLElement,
-  onEscape: () => void
-): FocusTrapController {
+export function createFocusTrap(container: HTMLElement, onEscape: () => void): FocusTrapController {
   const previousActive = document.activeElement as HTMLElement | null;
+  let active = true;
 
   const onKeyDown = (event: KeyboardEvent): void => {
+    if (!active) {
+      return;
+    }
+
     if (event.key === "Escape") {
       event.preventDefault();
       onEscape();
@@ -33,14 +40,15 @@ export function createFocusTrap(
       return;
     }
 
-    const currentIndex = focusable.indexOf(document.activeElement as HTMLElement);
+    const current = document.activeElement as HTMLElement | null;
+    const currentIndex = current ? focusable.indexOf(current) : -1;
     const movingBack = event.shiftKey;
-    let nextIndex = currentIndex;
 
+    let nextIndex: number;
     if (movingBack) {
       nextIndex = currentIndex <= 0 ? focusable.length - 1 : currentIndex - 1;
     } else {
-      nextIndex = currentIndex === focusable.length - 1 ? 0 : currentIndex + 1;
+      nextIndex = currentIndex === -1 || currentIndex >= focusable.length - 1 ? 0 : currentIndex + 1;
     }
 
     event.preventDefault();
@@ -48,13 +56,18 @@ export function createFocusTrap(
   };
 
   document.addEventListener("keydown", onKeyDown, true);
-  const first = getFocusable(container)[0];
-  first?.focus();
+  getFocusable(container)[0]?.focus();
 
   return {
     deactivate: () => {
+      if (!active) {
+        return;
+      }
+      active = false;
       document.removeEventListener("keydown", onKeyDown, true);
-      previousActive?.focus();
+      if (previousActive && document.contains(previousActive)) {
+        previousActive.focus();
+      }
     }
   };
 }

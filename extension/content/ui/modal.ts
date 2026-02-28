@@ -7,6 +7,12 @@ export type PauseModalOptions = {
 
 export type PauseModalResult = "confirm" | "cancel";
 
+type ActiveModalController = {
+  settle: (result: PauseModalResult) => void;
+};
+
+let activeModal: ActiveModalController | null = null;
+
 function formatReasons(reasons: string[]): string {
   if (reasons.length === 0) {
     return "Using your default pause.";
@@ -15,11 +21,14 @@ function formatReasons(reasons: string[]): string {
 }
 
 export function openPauseModal(options: PauseModalOptions): Promise<PauseModalResult> {
-  const existing = document.getElementById("micro-pause-overlay");
-  existing?.remove();
+  if (options.delaySeconds <= 0) {
+    return Promise.resolve("confirm");
+  }
+
+  activeModal?.settle("cancel");
 
   return new Promise<PauseModalResult>((resolve) => {
-    let remaining = options.delaySeconds;
+    let remaining = Math.max(1, Math.round(options.delaySeconds));
     let settled = false;
 
     const overlay = document.createElement("div");
@@ -64,17 +73,16 @@ export function openPauseModal(options: PauseModalOptions): Promise<PauseModalRe
     document.body.append(overlay);
 
     const trap = createFocusTrap(modal, () => settle("cancel"));
-
     const timer = window.setInterval(() => {
       remaining -= 1;
       if (remaining <= 0) {
         settle("confirm");
-        return;
+      } else {
+        countdown.textContent = `Sending in ${remaining}s`;
       }
-      countdown.textContent = `Sending in ${remaining}s`;
     }, 1000);
 
-    const settle = (result: PauseModalResult): void => {
+    function settle(result: PauseModalResult): void {
       if (settled) {
         return;
       }
@@ -82,10 +90,21 @@ export function openPauseModal(options: PauseModalOptions): Promise<PauseModalRe
       window.clearInterval(timer);
       trap.deactivate();
       overlay.remove();
+      if (activeModal?.settle === settle) {
+        activeModal = null;
+      }
       resolve(result);
-    };
+    }
 
+    modal.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" && !(event.target instanceof HTMLTextAreaElement)) {
+        event.preventDefault();
+        settle("confirm");
+      }
+    });
     cancelButton.addEventListener("click", () => settle("cancel"));
     confirmButton.addEventListener("click", () => settle("confirm"));
+
+    activeModal = { settle };
   });
 }
