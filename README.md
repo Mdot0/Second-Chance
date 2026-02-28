@@ -1,5 +1,5 @@
 # Second-Chance
 
 ```
-Hello
+
 ```
