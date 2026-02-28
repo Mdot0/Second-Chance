@@ -1,11 +1,41 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Micro-Pause</title>
     <link rel="stylesheet" href="./popup.css" />
   </head>
   <body>
-    <h1>Micro-Pause</h1>
+    <main class="popup">
+      <h1>Micro-Pause</h1>
+      <form id="settings-form" class="settings-form">
+        <label class="field checkbox-field">
+          <input id="enabled" type="checkbox" />
+          <span>Enable pause before send</span>
+        </label>
+
+        <label class="field">
+          <span>Base delay (seconds)</span>
+          <input id="delaySeconds" type="number" min="0" max="30" />
+        </label>
+
+        <label class="field checkbox-field">
+          <input id="smartPause" type="checkbox" />
+          <span>Enable smart pause rules</span>
+        </label>
+
+        <label class="field">
+          <span>Keywords (comma separated)</span>
+          <textarea id="keywords" rows="3" placeholder="urgent, confidential"></textarea>
+        </label>
+
+        <div class="actions">
+          <button type="submit" id="saveBtn">Save</button>
+        </div>
+        <p id="status" class="status" aria-live="polite"></p>
+      </form>
+    </main>
     <script type="module" src="./popup.ts"></script>
   </body>
 </html>
