@@ -7,12 +7,20 @@ import { openPauseModal } from "./ui/modal";
 
 type WindowWithFlag = Window & { __MICRO_PAUSE_BOOTED__?: boolean };
 const w = window as WindowWithFlag;
+const RELEASE_LOCK_DELAY_MS = 180;
+
+function attemptNativeSend(composeRoot: HTMLElement, source: string): void {
+  const sent = triggerNativeSend(composeRoot);
+  if (!sent) {
+    console.warn(`[Micro-Pause] Could not trigger native send (${source}).`);
+  }
+}
 
 if (!w.__MICRO_PAUSE_BOOTED__) {
   w.__MICRO_PAUSE_BOOTED__ = true;
   const activeComposeLocks = new WeakSet<HTMLElement>();
 
-  startSendInterception(async ({ composeRoot }) => {
+  startSendInterception(async ({ composeRoot, trigger }) => {
     if (activeComposeLocks.has(composeRoot)) {
       return;
     }
@@ -20,32 +28,34 @@ if (!w.__MICRO_PAUSE_BOOTED__) {
 
     try {
       const settings = await getSettings();
+
       if (!settings.enabled) {
-        triggerNativeSend(composeRoot);
+        attemptNativeSend(composeRoot, "disabled");
         return;
       }
 
       const context = buildComposeContext(composeRoot);
       const decision = computePauseDecision(context, settings);
-
-      if (decision.delaySeconds <= 0) {
-        triggerNativeSend(composeRoot);
-        return;
-      }
+      const delaySeconds = Math.max(1, decision.delaySeconds || 0);
 
       const result = await openPauseModal({
-        delaySeconds: decision.delaySeconds,
+        delaySeconds,
         reasons: decision.reasons
       });
 
       if (result === "confirm") {
-        triggerNativeSend(composeRoot);
+        attemptNativeSend(composeRoot, `confirmed-${trigger}`);
       }
     } catch (error) {
-      console.error("Micro-Pause failed; allowing send.", error);
-      triggerNativeSend(composeRoot);
+      console.error("[Micro-Pause] Core flow failed.", error);
+      const fallbackConfirm = window.confirm(
+        "Micro-Pause hit an error. Do you want to send this email anyway?"
+      );
+      if (fallbackConfirm) {
+        attemptNativeSend(composeRoot, "error-fallback-confirmed");
+      }
     } finally {
-      activeComposeLocks.delete(composeRoot);
+      window.setTimeout(() => activeComposeLocks.delete(composeRoot), RELEASE_LOCK_DELAY_MS);
     }
   });
 
