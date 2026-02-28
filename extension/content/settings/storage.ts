@@ -42,12 +42,12 @@ export async function getSettings(): Promise<PauseSettings> {
 
 export async function setSettings(patch: Partial<PauseSettings>): Promise<PauseSettings> {
   const storage = getStorageArea();
+  if (!storage) {
+    throw new Error("Chrome storage is unavailable.");
+  }
   const current = await getSettings();
   const next = normalizeSettings({ ...current, ...patch });
-
-  if (storage) {
-    await storage.set({ [SETTINGS_KEY]: next });
-  }
+  await storage.set({ [SETTINGS_KEY]: next });
   return next;
 }
 
