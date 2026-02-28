@@ -7,33 +7,37 @@
     <link rel="stylesheet" href="./popup.css" />
   </head>
   <body>
-    <main class="popup">
+    <header class="popup-header">
       <h1>Micro-Pause</h1>
+      <p class="popup-tagline">Think before you send</p>
+    </header>
+
+    <main class="popup-body">
       <form id="settings-form" class="settings-form">
         <label class="field checkbox-field">
           <input id="enabled" type="checkbox" />
-          <span>Enable pause before send</span>
+          <span class="checkbox-label">Enable pause before send</span>
         </label>
 
-        <label class="field">
-          <span>Base delay (seconds)</span>
+        <div class="field">
+          <span class="field-label">Base delay (seconds)</span>
           <input id="delaySeconds" type="number" min="0" max="30" />
           <span id="delay-hint" class="field-hint" aria-live="polite"></span>
-        </label>
+        </div>
 
         <label class="field checkbox-field">
           <input id="smartPause" type="checkbox" />
-          <span>Enable smart pause rules</span>
+          <span class="checkbox-label">Enable smart pause rules</span>
         </label>
 
-        <label class="field">
-          <span>Keywords (comma separated)</span>
+        <div class="field">
+          <span class="field-label">Keywords (comma separated)</span>
           <textarea id="keywords" rows="3" placeholder="urgent, confidential"></textarea>
           <span id="keywords-hint" class="field-hint" aria-live="polite"></span>
-        </label>
+        </div>
 
         <div class="actions">
-          <button type="submit" id="saveBtn">Save</button>
+          <button type="submit" id="saveBtn">Save Settings</button>
         </div>
         <p id="status" class="status" aria-live="polite"></p>
       </form>

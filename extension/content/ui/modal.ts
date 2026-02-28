@@ -53,6 +53,7 @@ export function openPauseModal(options: PauseModalOptions): Promise<PauseModalRe
     const countdown = document.createElement("div");
     countdown.className = "micro-pause-countdown";
     countdown.textContent = `Sending in ${remaining}s`;
+    countdown.dataset.urgency = remaining <= 3 ? "high" : remaining <= 6 ? "medium" : "low";
 
     const actions = document.createElement("div");
     actions.className = "micro-pause-actions";
@@ -79,6 +80,7 @@ export function openPauseModal(options: PauseModalOptions): Promise<PauseModalRe
         settle("confirm");
       } else {
         countdown.textContent = `Sending in ${remaining}s`;
+        countdown.dataset.urgency = remaining <= 3 ? "high" : remaining <= 6 ? "medium" : "low";
       }
     }, 1000);
 
