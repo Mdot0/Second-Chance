@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "Micro-Pause",
+  "version": "0.1.0",
+  "description": "Adds a timed pause before sending Gmail messages.",
+  "permissions": ["storage"],
+  "host_permissions": ["https://mail.google.com/*"],
+  "content_scripts": [
+    {
+      "matches": ["https://mail.google.com/*"],
+      "js": ["content/content.entry.js"],
+      "css": ["content/ui/styles.css"],
+      "run_at": "document_start"
+    }
+  ],
+  "action": {
+    "default_popup": "popup/popup.html"
+  }
+}
