@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Micro-Pause",
+  "name": "Second-Chance",
   "version": "0.1.0",
   "description": "Adds a timed pause before sending Gmail messages.",
   "permissions": ["storage"],
