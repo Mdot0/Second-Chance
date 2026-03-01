@@ -35,7 +35,7 @@ if (!w.__MICRO_PAUSE_BOOTED__) {
       }
 
       const context = buildComposeContext(composeRoot);
-      const analysis = computePauseAnalysis(context, settings);
+      const analysis = await computePauseAnalysis(context, settings);
       const delaySeconds = Math.max(1, analysis.delaySeconds || 0);
 
       const result = await openPauseModal({

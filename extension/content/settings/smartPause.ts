@@ -1,6 +1,7 @@
 import { MAX_DELAY_SECONDS, MIN_DELAY_SECONDS, type PauseSettings } from "./defaults";
+import { fetchLanguageToolIssues } from "./languageTool";
 import { analyzeSpelling } from "./spellcheck";
-import { TONE_SIGNALS } from "./toneRules";
+import { PROFANITY, TONE_SIGNALS } from "./toneRules";
 import type { ComposeContext } from "../interceptor/composeContext";
 
 export type IssueCategory = "grammar" | "formatting" | "tone" | "context";
@@ -186,6 +187,18 @@ function runToneChecks(context: ComposeContext, issueMap: Record<IssueCategory, 
     }
   });
 
+  PROFANITY.forEach((entry) => {
+    const pattern = new RegExp(`\\b${entry.word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i");
+    if (pattern.test(haystack)) {
+      addIssue(issueMap, {
+        category: "tone",
+        severity: entry.severity,
+        message: `Unprofessional language detected: "${entry.word}"`,
+        evidence: entry.word
+      });
+    }
+  });
+
   const allCapsWords = (`${context.subject} ${context.bodyRaw}`.match(/\b[A-Z]{4,}\b/g) ?? []).length;
   if (allCapsWords >= 2) {
     addIssue(issueMap, {
@@ -235,14 +248,19 @@ function buildSummaries(issueMap: Record<IssueCategory, AnalysisIssue[]>): Analy
     }));
 }
 
-export function computePauseAnalysis(context: ComposeContext, settings: PauseSettings): PauseAnalysis {
+export async function computePauseAnalysis(context: ComposeContext, settings: PauseSettings): Promise<PauseAnalysis> {
   const issueMap = makeIssueMap();
 
   runContextChecks(context, issueMap);
 
-  if (settings.checkGrammar) {
+  if (settings.useOnlineCheck) {
+    const text = `${context.subject}\n${context.bodyText}`.trim();
+    const ltIssues = await fetchLanguageToolIssues(text, settings.customDictionary);
+    ltIssues.forEach((issue) => addIssue(issueMap, issue));
+  } else if (settings.checkGrammar) {
     runGrammarChecks(context, settings, issueMap);
   }
+
   if (settings.checkFormatting) {
     runFormattingChecks(context, issueMap);
   }

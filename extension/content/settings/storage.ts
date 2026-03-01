@@ -41,7 +41,8 @@ export function normalizeSettings(input: unknown): PauseSettings {
     checkGrammar: raw.checkGrammar ?? legacySmartPause,
     checkFormatting: raw.checkFormatting ?? legacySmartPause,
     strictness: isStrictness(raw.strictness) ? raw.strictness : DEFAULT_SETTINGS.strictness,
-    customDictionary: normalizeCustomDictionary((raw as Partial<PauseSettings>).customDictionary)
+    customDictionary: normalizeCustomDictionary((raw as Partial<PauseSettings>).customDictionary),
+    useOnlineCheck: raw.useOnlineCheck ?? DEFAULT_SETTINGS.useOnlineCheck
   };
 }
 

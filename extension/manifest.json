@@ -4,7 +4,7 @@
   "version": "0.1.0",
   "description": "Adds a timed pause before sending Gmail messages.",
   "permissions": ["storage"],
-  "host_permissions": ["https://mail.google.com/*"],
+  "host_permissions": ["https://mail.google.com/*", "https://api.languagetool.org/*"],
   "content_scripts": [
     {
       "matches": ["https://mail.google.com/*"],
