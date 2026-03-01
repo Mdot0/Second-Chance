@@ -2,7 +2,7 @@ import { buildComposeContext } from "./interceptor/composeContext";
 import { startSendInterception } from "./interceptor/intercept";
 import { triggerNativeSend } from "./interceptor/sendTrigger";
 import { getSettings } from "./settings/storage";
-import { computePauseDecision } from "./settings/smartPause";
+import { computePauseAnalysis } from "./settings/smartPause";
 import { openPauseModal } from "./ui/modal";
 
 type WindowWithFlag = Window & { __MICRO_PAUSE_BOOTED__?: boolean };
@@ -35,12 +35,12 @@ if (!w.__MICRO_PAUSE_BOOTED__) {
       }
 
       const context = buildComposeContext(composeRoot);
-      const decision = computePauseDecision(context, settings);
-      const delaySeconds = Math.max(1, decision.delaySeconds || 0);
+      const analysis = computePauseAnalysis(context, settings);
+      const delaySeconds = Math.max(1, analysis.delaySeconds || 0);
 
       const result = await openPauseModal({
         delaySeconds,
-        reasons: decision.reasons
+        analysis
       });
 
       if (result === "confirm") {

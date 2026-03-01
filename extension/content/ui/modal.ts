@@ -1,8 +1,9 @@
+import type { AnalysisIssue, PauseAnalysis } from "../settings/smartPause";
 import { createFocusTrap } from "./focusTrap";
 
 export type PauseModalOptions = {
   delaySeconds: number;
-  reasons: string[];
+  analysis: PauseAnalysis;
 };
 
 export type PauseModalResult = "confirm" | "cancel";
@@ -13,11 +14,87 @@ type ActiveModalController = {
 
 let activeModal: ActiveModalController | null = null;
 
-function formatReasons(reasons: string[]): string {
-  if (reasons.length === 0) {
-    return "Using your default pause.";
+function labelForCount(count: number): string {
+  return count === 1 ? "1 issue" : `${count} issues`;
+}
+
+function issueLine(issue: AnalysisIssue): string {
+  return issue.evidence ? `${issue.message} (${issue.evidence})` : issue.message;
+}
+
+function createSummaryRow(
+  headline: string,
+  issues: AnalysisIssue[]
+): HTMLElement {
+  const row = document.createElement("div");
+  row.className = "micro-pause-summary-row";
+
+  const heading = document.createElement("div");
+  heading.className = "micro-pause-summary-headline";
+  heading.textContent = headline;
+
+  const count = document.createElement("span");
+  count.className = "micro-pause-summary-count";
+  count.textContent = labelForCount(issues.length);
+
+  const headerLine = document.createElement("div");
+  headerLine.className = "micro-pause-summary-header";
+  headerLine.append(heading, count);
+
+  row.append(headerLine);
+
+  if (issues.length > 0) {
+    const toggle = document.createElement("button");
+    toggle.type = "button";
+    toggle.className = "micro-pause-details-toggle";
+    toggle.textContent = "View details";
+    toggle.setAttribute("aria-expanded", "false");
+
+    const details = document.createElement("ul");
+    details.className = "micro-pause-details-list";
+    details.hidden = true;
+
+    issues.forEach((issue) => {
+      const item = document.createElement("li");
+      item.textContent = issueLine(issue);
+      details.append(item);
+    });
+
+    toggle.addEventListener("click", () => {
+      const expanded = toggle.getAttribute("aria-expanded") === "true";
+      toggle.setAttribute("aria-expanded", expanded ? "false" : "true");
+      toggle.textContent = expanded ? "View details" : "Hide details";
+      details.hidden = expanded;
+    });
+
+    row.append(toggle, details);
   }
-  return `Smart pause active: ${reasons.join(", ")}.`;
+
+  return row;
+}
+
+function buildContextSection(analysis: PauseAnalysis): HTMLElement {
+  const section = document.createElement("section");
+  section.className = "micro-pause-context";
+
+  const heading = document.createElement("h3");
+  heading.className = "micro-pause-context-title";
+  heading.textContent = "Generalized context";
+  section.append(heading);
+
+  if (analysis.summaries.length === 0) {
+    const empty = document.createElement("p");
+    empty.className = "micro-pause-context-empty";
+    empty.textContent = "No major issues found, but take a final look before sending.";
+    section.append(empty);
+    return section;
+  }
+
+  analysis.summaries.forEach((summary) => {
+    section.append(createSummaryRow(summary.headline, analysis.issuesByCategory[summary.category]));
+  });
+
+  return section;
 }
 
 export function openPauseModal(options: PauseModalOptions): Promise<PauseModalResult> {
@@ -46,14 +123,16 @@ export function openPauseModal(options: PauseModalOptions): Promise<PauseModalRe
     title.className = "micro-pause-title";
     title.textContent = "Pause before sending?";
 
-    const description = document.createElement("p");
-    description.className = "micro-pause-description";
-    description.textContent = formatReasons(options.reasons);
+    const subtitle = document.createElement("p");
+    subtitle.className = "micro-pause-description";
+    subtitle.textContent = "Review the flags below before deciding to send.";
 
     const countdown = document.createElement("div");
     countdown.className = "micro-pause-countdown";
     countdown.textContent = `Sending in ${remaining}s`;
     countdown.dataset.urgency = remaining <= 3 ? "high" : remaining <= 6 ? "medium" : "low";
+
+    const contextSection = buildContextSection(options.analysis);
 
     const actions = document.createElement("div");
     actions.className = "micro-pause-actions";
@@ -69,7 +148,7 @@ export function openPauseModal(options: PauseModalOptions): Promise<PauseModalRe
     confirmButton.textContent = "Send Now";
 
     actions.append(cancelButton, confirmButton);
-    modal.append(title, description, countdown, actions);
+    modal.append(title, subtitle, contextSection, countdown, actions);
     overlay.append(modal);
     document.body.append(overlay);
 

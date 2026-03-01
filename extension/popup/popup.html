@@ -9,7 +9,7 @@
   <body>
     <header class="popup-header">
       <h1>Micro-Pause</h1>
-      <p class="popup-tagline">Think before you send</p>
+      <p class="popup-tagline">Generalized pre-send checks</p>
     </header>
 
     <main class="popup-body">
@@ -26,18 +26,30 @@
         </div>
 
         <label class="field checkbox-field">
-          <input id="smartPause" type="checkbox" />
-          <span class="checkbox-label">Enable smart pause rules</span>
+          <input id="checkTone" type="checkbox" />
+          <span class="checkbox-label">Check tone and negative connotation</span>
+        </label>
+
+        <label class="field checkbox-field">
+          <input id="checkGrammar" type="checkbox" />
+          <span class="checkbox-label">Check grammar quality</span>
+        </label>
+
+        <label class="field checkbox-field">
+          <input id="checkFormatting" type="checkbox" />
+          <span class="checkbox-label">Check formatting and indentation</span>
         </label>
 
         <div class="field">
-          <span class="field-label">Keywords (comma separated)</span>
-          <textarea id="keywords" rows="3" placeholder="urgent, confidential"></textarea>
-          <span id="keywords-hint" class="field-hint" aria-live="polite"></span>
+          <span class="field-label">Strictness</span>
+          <select id="strictness">
+            <option value="balanced">Balanced</option>
+            <option value="strict">Strict</option>
+          </select>
         </div>
 
         <div class="actions">
-          <button type="submit" id="saveBtn">Save Settings</button>
+          <button type="submit" id="saveBtn">Save settings</button>
         </div>
         <p id="status" class="status" aria-live="polite"></p>
       </form>

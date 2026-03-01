@@ -1,8 +1,13 @@
+export type StrictnessMode = "balanced" | "strict";
+
 export type PauseSettings = {
   enabled: boolean;
   delaySeconds: number;
-  smartPause: boolean;
-  keywords: string[];
+  checkTone: boolean;
+  checkGrammar: boolean;
+  checkFormatting: boolean;
+  strictness: StrictnessMode;
+  customDictionary: string[];
 };
 
 export const SETTINGS_KEY = "microPauseSettings";
@@ -12,6 +17,9 @@ export const MAX_DELAY_SECONDS = 30;
 export const DEFAULT_SETTINGS: PauseSettings = {
   enabled: true,
   delaySeconds: 5,
-  smartPause: true,
-  keywords: ["urgent", "asap", "confidential", "private"]
+  checkTone: true,
+  checkGrammar: true,
+  checkFormatting: true,
+  strictness: "balanced",
+  customDictionary: []
 };
