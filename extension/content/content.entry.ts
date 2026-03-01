@@ -12,7 +12,7 @@ const RELEASE_LOCK_DELAY_MS = 180;
 function attemptNativeSend(composeRoot: HTMLElement, source: string): void {
   const sent = triggerNativeSend(composeRoot);
   if (!sent) {
-    console.warn(`[Micro-Pause] Could not trigger native send (${source}).`);
+    console.warn(`[Second-Chance] Could not trigger native send (${source}).`);
   }
 }
 
@@ -47,9 +47,9 @@ if (!w.__MICRO_PAUSE_BOOTED__) {
         attemptNativeSend(composeRoot, `confirmed-${trigger}`);
       }
     } catch (error) {
-      console.error("[Micro-Pause] Core flow failed.", error);
+      console.error("[Second-Chance] Core flow failed.", error);
       const fallbackConfirm = window.confirm(
-        "Micro-Pause hit an error. Do you want to send this email anyway?"
+        "Second-Chance hit an error. Do you want to send this email anyway?"
       );
       if (fallbackConfirm) {
         attemptNativeSend(composeRoot, "error-fallback-confirmed");
@@ -59,5 +59,5 @@ if (!w.__MICRO_PAUSE_BOOTED__) {
     }
   });
 
-  console.log("Micro-Pause content script loaded");
+  console.log("Second-Chance content script loaded");
 }

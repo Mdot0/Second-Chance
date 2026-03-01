@@ -34,7 +34,7 @@ export function startSendInterception(onAttempt: InterceptHandler): () => void {
     }
     lastAttemptByCompose.set(composeRoot, now);
     void Promise.resolve(onAttempt({ composeRoot, trigger, event })).catch((error) => {
-      console.error("Micro-Pause send interception callback failed.", error);
+      console.error("Second-Chance send interception callback failed.", error);
     });
   };
 
