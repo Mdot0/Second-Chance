@@ -30,18 +30,29 @@ export function findSendButton(composeRoot: HTMLElement): HTMLElement | null {
 }
 
 export function findSendButtonFromTarget(target: EventTarget | null): HTMLElement | null {
-  if (!(target instanceof Element)) {
+  let element: Element | null = null;
+
+  if (target instanceof Element) {
+    element = target;
+  } else if (target instanceof Node) {
+    element = target.parentElement;
+  }
+
+  if (!element) {
     return null;
   }
-  return target.closest<HTMLElement>(SEND_SELECTOR_LIST);
+  return element.closest<HTMLElement>(SEND_SELECTOR_LIST);
 }
 
 export function isBypassSend(button: HTMLElement): boolean {
   return button.getAttribute(SEND_BYPASS_ATTR) === "true";
 }
 
-export function triggerNativeSend(composeRoot: HTMLElement): boolean {
-  const button = findSendButton(composeRoot);
+export function triggerNativeSend(composeRoot: HTMLElement, preferredButton?: HTMLElement | null): boolean {
+  const button =
+    preferredButton && preferredButton.isConnected
+      ? preferredButton
+      : findSendButton(composeRoot);
   if (!button) {
     return false;
   }

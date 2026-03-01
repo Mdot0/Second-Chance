@@ -1,17 +1,38 @@
 import { MAX_DELAY_SECONDS, MIN_DELAY_SECONDS, type PauseSettings } from "./defaults";
 import { fetchLanguageToolIssues } from "./languageTool";
-import { analyzeSpelling } from "./spellcheck";
-import { PROFANITY, TONE_SIGNALS } from "./toneRules";
+import { PROFANITY } from "./toneRules";
 import type { ComposeContext } from "../interceptor/composeContext";
+import leoProfanity from "leo-profanity";
+
+// Words already covered by the manual PROFANITY list (severity-controlled).
+const MANUAL_PROFANITY_WORDS = new Set(PROFANITY.map((e) => e.word));
+// All remaining leo-profanity words not in the manual list — computed once at load.
+const LEO_EXTENDED_WORDS: string[] = leoProfanity.list().filter((w: string) => !MANUAL_PROFANITY_WORDS.has(w));
+
+function normalizeLeet(text: string): string {
+  return text
+    .replace(/[@4]/g, "a")
+    .replace(/3/g, "e")
+    .replace(/[!1]/g, "i")
+    .replace(/0/g, "o")
+    .replace(/5/g, "s")
+    .replace(/\+/g, "t")
+    .replace(/[*."'`]/g, "");
+}
 
 export type IssueCategory = "grammar" | "formatting" | "tone" | "context";
 export type IssueSeverity = "low" | "medium" | "high";
+
+export type IssueLocation = "subject" | "body";
 
 export type AnalysisIssue = {
   category: IssueCategory;
   severity: IssueSeverity;
   message: string;
   evidence?: string;
+  location?: IssueLocation;
+  offset?: number;
+  length?: number;
 };
 
 export type AnalysisSummary = {
@@ -29,7 +50,7 @@ export type PauseAnalysis = {
 const HEADLINES: Record<IssueCategory, string> = {
   grammar: "Grammar needs to be fixed",
   formatting: "Formatting should be cleaned up",
-  tone: "Tone may feel negative",
+  tone: "Profanity or offensive language detected",
   context: "Generalized context suggests a quick review"
 };
 
@@ -54,6 +75,87 @@ function lines(raw: string): string[] {
   return raw.split("\n");
 }
 
+function escapeRegex(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function maxConsecutiveEmptyLines(raw: string): number {
+  const bodyLines = lines(raw);
+  let maxRun = 0;
+  let currentRun = 0;
+
+  for (const line of bodyLines) {
+    if (line.trim().length === 0) {
+      currentRun += 1;
+      if (currentRun > maxRun) {
+        maxRun = currentRun;
+      }
+    } else {
+      currentRun = 0;
+    }
+  }
+
+  return maxRun;
+}
+
+function isLineBreakChar(ch: string): boolean {
+  return ch === "\n" || ch === "\r" || ch === "\u2028" || ch === "\u2029";
+}
+
+function hasLineBreakAfterComma(text: string, commaIndex: number): boolean {
+  let cursor = commaIndex + 1;
+  let sawLineBreak = false;
+  while (cursor < text.length) {
+    const ch = text[cursor];
+    if (isLineBreakChar(ch)) {
+      sawLineBreak = true;
+      cursor += 1;
+      continue;
+    }
+    if (/\s/u.test(ch)) {
+      cursor += 1;
+      continue;
+    }
+    break;
+  }
+  return sawLineBreak;
+}
+
+function isCommaSpacingAcrossLineBreak(issue: AnalysisIssue, bodyRaw: string): boolean {
+  if (issue.category !== "formatting" || issue.location !== "body") {
+    return false;
+  }
+
+  if (!issue.message.toLowerCase().includes("space after the comma")) {
+    return false;
+  }
+
+  const offset = issue.offset;
+  if (typeof offset === "number" && offset >= 0 && offset < bodyRaw.length) {
+    const candidateIndexes = [offset - 3, offset - 2, offset - 1, offset, offset + 1, offset + 2, offset + 3];
+    for (const commaIndex of candidateIndexes) {
+      if (commaIndex >= 0 && commaIndex < bodyRaw.length && bodyRaw[commaIndex] === ",") {
+        if (hasLineBreakAfterComma(bodyRaw, commaIndex)) {
+          return true;
+        }
+      }
+    }
+  }
+
+  const evidence = issue.evidence ?? "";
+  const match = evidence.match(/^,\s*([A-Za-z0-9]+)/);
+  if (!match) {
+    return false;
+  }
+
+  const token = match[1];
+  const lineBreakPattern = new RegExp(`,\\s*[\\r\\n\\u2028\\u2029]+\\s*${escapeRegex(token)}\\b`, "i");
+  return lineBreakPattern.test(bodyRaw);
+}
+
+const ATTACHMENT_KEYWORDS =
+  /\b(attached|attachment|attaching|find attached|please find|see attached|as attached|enclosed|i'?ve attached|i have attached)\b/i;
+
 function runContextChecks(context: ComposeContext, issueMap: Record<IssueCategory, AnalysisIssue[]>): void {
   if (context.toCount >= 2) {
     addIssue(issueMap, {
@@ -72,62 +174,25 @@ function runContextChecks(context: ComposeContext, issueMap: Record<IssueCategor
       evidence: "Attachment is present"
     });
   }
-}
 
-function runGrammarChecks(
-  context: ComposeContext,
-  settings: PauseSettings,
-  issueMap: Record<IssueCategory, AnalysisIssue[]>
-): void {
   const fullText = `${context.subject} ${context.bodyText}`.trim();
-  const rawText = `${context.subject}\n${context.bodyRaw}`.trim();
-  if (!fullText) {
-    return;
-  }
-
-  analyzeSpelling(rawText, {
-    strict: settings.strictness === "strict",
-    customDictionary: settings.customDictionary
-  }).forEach((finding) => {
+  if (!context.hasAttachment && fullText.length > 0 && ATTACHMENT_KEYWORDS.test(fullText)) {
     addIssue(issueMap, {
-      category: "grammar",
-      severity: finding.severity,
-      message: finding.message,
-      evidence: finding.evidence
-    });
-  });
-
-  const repeatedPunctuation = fullText.match(/[!?]{3,}/);
-  if (repeatedPunctuation) {
-    addIssue(issueMap, {
-      category: "grammar",
-      severity: "low",
-      message: "Repeated punctuation looks unpolished.",
-      evidence: repeatedPunctuation[0]
-    });
-  }
-
-  const firstLetter = fullText.match(/[A-Za-z]/)?.[0] ?? "";
-  if (firstLetter.length > 0 && firstLetter === firstLetter.toLowerCase()) {
-    addIssue(issueMap, {
-      category: "grammar",
-      severity: "low",
-      message: "Opening sentence should start with a capital letter."
-    });
-  }
-
-  if (!/[.!?]\s*$/.test(fullText) && fullText.length >= 35) {
-    addIssue(issueMap, {
-      category: "grammar",
-      severity: "low",
-      message: "Email may be missing ending punctuation."
+      category: "context",
+      severity: "high",
+      message: "You mentioned an attachment but no file is attached.",
+      evidence: "Attachment reference without file",
+      location: ATTACHMENT_KEYWORDS.test(context.subject) ? "subject" : "body"
     });
   }
 }
+
 
 function runFormattingChecks(context: ComposeContext, issueMap: Record<IssueCategory, AnalysisIssue[]>): void {
   const bodyLines = lines(context.bodyRaw);
-  if (bodyLines.length === 0) {
+  const bodyBlocks = context.bodyBlocks;
+
+  if (bodyLines.length === 0 && bodyBlocks.length === 0) {
     return;
   }
 
@@ -138,25 +203,34 @@ function runFormattingChecks(context: ComposeContext, issueMap: Record<IssueCate
       category: "formatting",
       severity: "medium",
       message: "Mixed tabs and spaces detected in indentation.",
-      evidence: "Tabs and spaces are both used"
+      evidence: "Tabs and spaces are both used",
+      location: "body"
     });
   }
 
-  if (/\n\s*\n\s*\n/.test(context.bodyRaw)) {
+  const emptyLineRun = maxConsecutiveEmptyLines(context.bodyRaw);
+  if (emptyLineRun >= 4) {
     addIssue(issueMap, {
       category: "formatting",
       severity: "low",
-      message: "There are large blank gaps in the email body."
+      message: "There are large blank gaps in the email body.",
+      location: "body"
     });
   }
 
-  const hasDashBullets = bodyLines.some((line) => /^[-*]\s+/.test(line.trim()));
-  const hasNumberBullets = bodyLines.some((line) => /^\d+[.)]\s+/.test(line.trim()));
-  if (hasDashBullets && hasNumberBullets) {
+  const hasBulletListItems = bodyBlocks.some((block) => block.type === "bullet-item");
+  const hasNumberListItems = bodyBlocks.some((block) => block.type === "number-item");
+  const hasMixedListStylesInBlocks = hasBulletListItems && hasNumberListItems;
+  const hasMixedListStylesInLines =
+    bodyLines.some((line) => /^[-*]\s+/.test(line.trim())) &&
+    bodyLines.some((line) => /^\d+[.)]\s+/.test(line.trim()));
+
+  if (hasMixedListStylesInBlocks || hasMixedListStylesInLines) {
     addIssue(issueMap, {
       category: "formatting",
       severity: "low",
-      message: "Bullet styles are mixed. Use one list style."
+      message: "Bullet styles are mixed. Use one list style.",
+      location: "body"
     });
   }
 
@@ -166,58 +240,86 @@ function runFormattingChecks(context: ComposeContext, issueMap: Record<IssueCate
       category: "formatting",
       severity: "low",
       message: "Trailing spaces detected.",
-      evidence: trailingSpaceLine
+      evidence: trailingSpaceLine,
+      location: "body"
     });
+  }
+
+  const textBlocks = bodyBlocks.filter((block) => block.type === "paragraph" || block.type === "quote");
+  const shortTextBlockCount = textBlocks.filter((block) => block.text.length > 0 && block.text.length <= 45).length;
+  if (
+    textBlocks.length >= 5 &&
+    shortTextBlockCount / textBlocks.length >= 0.8 &&
+    !hasBulletListItems &&
+    !hasNumberListItems
+  ) {
+    addIssue(issueMap, {
+      category: "formatting",
+      severity: "low",
+      message: "Body looks split into many short lines. Consider combining into full paragraphs.",
+      evidence: `${shortTextBlockCount} short text blocks`,
+      location: "body"
+    });
+  }
+
+  const nonBlankBlocks = bodyBlocks.filter((block) => block.type !== "blank");
+  if (nonBlankBlocks.length > 0) {
+    const indentLevels = nonBlankBlocks.map((block) => block.indentLevel);
+    const minIndent = Math.min(...indentLevels);
+    const maxIndent = Math.max(...indentLevels);
+    if (maxIndent - minIndent >= 2) {
+      addIssue(issueMap, {
+        category: "formatting",
+        severity: "low",
+        message: "Indentation depth is inconsistent across sections.",
+        evidence: `Indent levels ${minIndent}-${maxIndent}`,
+        location: "body"
+      });
+    }
   }
 }
 
-function runToneChecks(context: ComposeContext, issueMap: Record<IssueCategory, AnalysisIssue[]>): void {
-  const haystack = `${context.subject}\n${context.bodyRaw}`.toLowerCase();
-  const seenPhrases = new Set<string>();
+function runProfanityChecks(context: ComposeContext, issueMap: Record<IssueCategory, AnalysisIssue[]>): void {
+  const subjectRaw = context.subject.toLowerCase();
+  const bodyRaw = context.bodyRaw.toLowerCase();
+  const subjectNorm = normalizeLeet(subjectRaw);
+  const bodyNorm = normalizeLeet(bodyRaw);
 
-  TONE_SIGNALS.forEach((signal) => {
-    if (!seenPhrases.has(signal.phrase) && haystack.includes(signal.phrase)) {
-      seenPhrases.add(signal.phrase);
-      addIssue(issueMap, {
-        category: "tone",
-        severity: signal.severity,
-        message: `Tone phrase detected: "${signal.phrase}"`,
-        evidence: signal.category
-      });
-    }
-  });
+  function escapeRegex(word: string): string {
+    return word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  }
 
+  // Manual list: severity-mapped, checked on both raw and leet-normalized text.
   PROFANITY.forEach((entry) => {
-    const pattern = new RegExp(`\\b${entry.word.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i");
-    if (pattern.test(haystack)) {
+    const pattern = new RegExp(`\\b${escapeRegex(entry.word)}\\b`, "i");
+    const inSubject = pattern.test(subjectRaw) || pattern.test(subjectNorm);
+    const inBody = pattern.test(bodyRaw) || pattern.test(bodyNorm);
+    if (inSubject || inBody) {
       addIssue(issueMap, {
         category: "tone",
         severity: entry.severity,
-        message: `Unprofessional language detected: "${entry.word}"`,
-        evidence: entry.word
+        message: `Offensive language detected: "${entry.word}"`,
+        evidence: entry.word,
+        location: inSubject ? "subject" : "body"
       });
     }
   });
 
-  const allCapsWords = (`${context.subject} ${context.bodyRaw}`.match(/\b[A-Z]{4,}\b/g) ?? []).length;
-  if (allCapsWords >= 2) {
-    addIssue(issueMap, {
-      category: "tone",
-      severity: allCapsWords >= 4 ? "high" : "medium",
-      message: "Multiple ALL CAPS words may read as aggressive.",
-      evidence: `${allCapsWords} all-caps words`
-    });
-  }
-
-  const exclamations = (`${context.subject} ${context.bodyRaw}`.match(/!/g) ?? []).length;
-  if (exclamations >= 3) {
-    addIssue(issueMap, {
-      category: "tone",
-      severity: exclamations >= 5 ? "high" : "medium",
-      message: "Heavy exclamation usage may feel confrontational.",
-      evidence: `${exclamations} exclamation marks`
-    });
-  }
+  // Leo-profanity extended list: broad coverage, checked on normalized text only.
+  LEO_EXTENDED_WORDS.forEach((word) => {
+    const pattern = new RegExp(`\\b${escapeRegex(word)}\\b`, "i");
+    const inSubject = pattern.test(subjectNorm);
+    const inBody = pattern.test(bodyNorm);
+    if (inSubject || inBody) {
+      addIssue(issueMap, {
+        category: "tone",
+        severity: "medium",
+        message: `Offensive language detected: "${word}"`,
+        evidence: word,
+        location: inSubject ? "subject" : "body"
+      });
+    }
+  });
 }
 
 function issueWeight(severity: IssueSeverity): number {
@@ -253,20 +355,26 @@ export async function computePauseAnalysis(context: ComposeContext, settings: Pa
 
   runContextChecks(context, issueMap);
 
-  if (settings.useOnlineCheck) {
-    const text = `${context.subject}\n${context.bodyText}`.trim();
-    const ltIssues = await fetchLanguageToolIssues(text, settings.customDictionary);
+  if (settings.checkGrammar) {
+    const ltIssues = (
+      await Promise.all([
+        context.subject.trim().length > 0
+          ? fetchLanguageToolIssues(context.subject, settings.customDictionary, "subject")
+          : Promise.resolve([]),
+        context.bodyRaw.trim().length > 0
+          ? fetchLanguageToolIssues(context.bodyRaw, settings.customDictionary, "body")
+          : Promise.resolve([])
+      ])
+    )
+      .flat()
+      .filter((issue) => !isCommaSpacingAcrossLineBreak(issue, context.bodyRaw));
     ltIssues.forEach((issue) => addIssue(issueMap, issue));
-  } else if (settings.checkGrammar) {
-    runGrammarChecks(context, settings, issueMap);
   }
 
   if (settings.checkFormatting) {
     runFormattingChecks(context, issueMap);
   }
-  if (settings.checkTone) {
-    runToneChecks(context, issueMap);
-  }
+  runProfanityChecks(context, issueMap);
 
   const delaySeconds = calculateDelay(
     settings.delaySeconds,

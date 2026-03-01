@@ -3,59 +3,66 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Second-Chance</title>
+    <title>Second Chance</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="./popup.css" />
   </head>
   <body>
     <header class="popup-header">
-      <h1>Second-Chance</h1>
-      <p class="popup-tagline">Everyone gets second chances.</p>
+      <div class="popup-brand">
+        <img class="popup-logo" src="./logo.png" alt="Second Chance logo" />
+        <div class="popup-brand-text">
+          <h1 class="popup-title">Second Chance</h1>
+          <p class="popup-tagline">Everyone Gets Second Chances.</p>
+        </div>
+      </div>
     </header>
 
     <main class="popup-body">
       <form id="settings-form" class="settings-form">
-        <label class="field checkbox-field">
-          <input id="enabled" type="checkbox" />
-          <span class="checkbox-label">Enable pause before send</span>
-        </label>
 
-        <div class="field">
-          <span class="field-label">Base delay (seconds)</span>
-          <input id="delaySeconds" type="number" min="0" max="30" />
-          <span id="delay-hint" class="field-hint" aria-live="polite"></span>
+        <div class="settings-section">
+          <label class="checkbox-field">
+            <span class="checkbox-label">Enable pause before send</span>
+            <input id="enabled" type="checkbox" class="toggle-input" />
+            <span class="toggle-track" aria-hidden="true"></span>
+          </label>
         </div>
 
-        <label class="field checkbox-field">
-          <input id="checkTone" type="checkbox" />
-          <span class="checkbox-label">Check tone and negative connotation</span>
-        </label>
+        <div class="settings-section">
+          <p class="section-label">Detection</p>
+          <label class="checkbox-field">
+            <span class="checkbox-label">Grammar quality</span>
+            <input id="checkGrammar" type="checkbox" class="toggle-input" />
+            <span class="toggle-track" aria-hidden="true"></span>
+          </label>
+          <label class="checkbox-field">
+            <span class="checkbox-label">Formatting &amp; indentation</span>
+            <input id="checkFormatting" type="checkbox" class="toggle-input" />
+            <span class="toggle-track" aria-hidden="true"></span>
+          </label>
+        </div>
 
-        <label class="field checkbox-field">
-          <input id="checkGrammar" type="checkbox" />
-          <span class="checkbox-label">Check grammar quality</span>
-        </label>
-
-        <label class="field checkbox-field">
-          <input id="useOnlineCheck" type="checkbox" />
-          <span class="checkbox-label">Enhanced grammar check (online)</span>
-        </label>
-        <p class="field-hint">Sends email text to LanguageTool's servers for deeper spell and grammar analysis. Overrides local grammar check when enabled.</p>
-
-        <label class="field checkbox-field">
-          <input id="checkFormatting" type="checkbox" />
-          <span class="checkbox-label">Check formatting and indentation</span>
-        </label>
-
-        <div class="field">
-          <span class="field-label">Strictness</span>
-          <select id="strictness">
-            <option value="balanced">Balanced</option>
-            <option value="strict">Strict</option>
-          </select>
+        <div class="settings-section">
+          <p class="section-label">Configuration</p>
+          <div class="field">
+            <label class="field-label" for="delaySeconds">Base delay (seconds)</label>
+            <input id="delaySeconds" type="number" min="0" max="30" />
+            <span id="delay-hint" class="field-hint" aria-live="polite"></span>
+          </div>
+          <div class="field field--divided">
+            <label class="field-label" for="strictness">Strictness</label>
+            <select id="strictness">
+              <option value="balanced">Balanced</option>
+              <option value="strict">Strict</option>
+            </select>
+          </div>
         </div>
 
         <div class="actions">
-          <button type="submit" id="saveBtn">Save settings</button>
+          <button type="submit" id="saveBtn">Save Settings</button>
         </div>
         <p id="status" class="status" aria-live="polite"></p>
       </form>

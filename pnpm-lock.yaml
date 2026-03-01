@@ -7,6 +7,10 @@ settings:
 importers:
 
   .:
+    dependencies:
+      leo-profanity:
+        specifier: ^1.9.0
+        version: 1.9.0
     devDependencies:
       '@types/chrome':
         specifier: 0.0.261
@@ -764,6 +768,9 @@ packages:
   flatted@3.3.3:
     resolution: {integrity: sha512-GX+ysw4PBCz0PzosHDepZGANEuFCMLrnRTiEy9McGjmkCQYwRq4A/X786G/fjM/+OjsWSU1ZrY5qyARZmO/uwg==}
 
+  french-badwords-list@1.0.7:
+    resolution: {integrity: sha512-H1ziKs2PJh2+UXZ9oCGJ/rRQpsI9NBykGf2Sc7WaKaj1OnWFuBXfsvANTdRcfVmOghGQaUmRyZ1hJOPbDpy04Q==}
+
   fs.realpath@1.0.0:
     resolution: {integrity: sha512-OO0pH2lK6a0hZnAdau5ItzHPI6pUlvI7jMVnxUQRtw4owF2wk8lOSabtGDCTP4Ggrg2MbGnWO9X8K1t4+fGMDw==}
 
@@ -852,6 +859,10 @@ packages:
 
   keyv@4.5.4:
     resolution: {integrity: sha512-oxVHkHR/EJf2CNXnWxRLW6mg7JyCCUcG0DtEGmL2ctUo1PNTin1PUil+r/+4r5MpVgC/fn1kjsx7mjSujKqIpw==}
+
+  leo-profanity@1.9.0:
+    resolution: {integrity: sha512-vMrrrjsbT+fA5I/1rlBEVT5YjJsw1ASIVF8/xBEdZ6ylsg5AEIBrEvHxwe5XAmfVuTBi7aw2KcO2L3s9ddpKzw==}
+    engines: {node: '>=18'}
 
   levn@0.4.1:
     resolution: {integrity: sha512-+bT2uH4E5LGE7h/n3evcS/sQlJXCpIp6ym8OWJ5eV6+67Dsql/LaaT7qJBAt2rzfoa/5QBGBhxDix1dMt2kQKQ==}
@@ -972,6 +983,10 @@ packages:
 
   run-parallel@1.2.0:
     resolution: {integrity: sha512-5l4VyZR86LZ/lDxZTR6jqL8AFE2S0IFLMP26AbjsLVADxHdhB/c0GUsH+y39UfCi3dzz8OlQuPmnaJOMoDHQBA==}
+
+  russian-bad-words@0.5.0:
+    resolution: {integrity: sha512-euNvEYki6iYYpkNbeudW+lEMMYGEmN7EBwVF8ezlbv0bZoQpVYB7W10cCeUIGV7Ed50sJynLQ0c559q5iI0ejQ==}
+    engines: {node: '>=10'}
 
   semver@7.7.4:
     resolution: {integrity: sha512-vFKC2IEtQnVhpT78h1Yp8wzwrf8CM+MzKMHGJZfBtzhZNycRFnXsHk6E5TxIkkMsgNS7mdX3AGB7x2QM2di4lA==}
@@ -1701,6 +1716,9 @@ snapshots:
 
   flatted@3.3.3: {}
 
+  french-badwords-list@1.0.7:
+    optional: true
+
   fs.realpath@1.0.0: {}
 
   fsevents@2.3.3:
@@ -1781,6 +1799,11 @@ snapshots:
   keyv@4.5.4:
     dependencies:
       json-buffer: 3.0.1
+
+  leo-profanity@1.9.0:
+    optionalDependencies:
+      french-badwords-list: 1.0.7
+      russian-bad-words: 0.5.0
 
   levn@0.4.1:
     dependencies:
@@ -1907,6 +1930,9 @@ snapshots:
   run-parallel@1.2.0:
     dependencies:
       queue-microtask: 1.2.3
+
+  russian-bad-words@0.5.0:
+    optional: true
 
   semver@7.7.4: {}
 

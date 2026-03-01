@@ -173,6 +173,66 @@
   outline-offset: 2px;
 }
 
+/* ── Skeleton loading ── */
+@keyframes micro-pause-shimmer {
+  from {
+    background-position: -200% center;
+  }
+  to {
+    background-position: 200% center;
+  }
+}
+
+.micro-pause-skeleton-line {
+  height: 13px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% auto;
+  animation: micro-pause-shimmer 1.4s linear infinite;
+  margin-top: 8px;
+}
+
+.micro-pause-skeleton-line:last-child {
+  width: 60%;
+}
+
+/* ── Severity colors on summary rows ── */
+.micro-pause-summary-row[data-severity="high"] .micro-pause-summary-headline {
+  color: #dc2626;
+}
+
+.micro-pause-summary-row[data-severity="medium"] .micro-pause-summary-headline {
+  color: #d97706;
+}
+
+.micro-pause-summary-row[data-severity="low"] .micro-pause-summary-headline {
+  color: #0369a1;
+}
+
+/* ── Severity colors on detail list items ── */
+.micro-pause-details-list li[data-severity="high"] {
+  color: #dc2626;
+}
+
+.micro-pause-details-list li[data-severity="medium"] {
+  color: #b45309;
+}
+
+/* ── All-clear state ── */
+.micro-pause-context--clear {
+  border-color: #86efac;
+  background: #f0fdf4;
+}
+
+.micro-pause-context--clear .micro-pause-context-title {
+  color: #15803d;
+}
+
+.micro-pause-context--clear .micro-pause-context-empty {
+  color: #166534;
+  font-weight: 500;
+}
+
 @media (max-width: 480px) {
   .micro-pause-modal {
     padding: 16px;
