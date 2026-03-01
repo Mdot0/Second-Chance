@@ -15,13 +15,17 @@ function copyExtensionStatic() {
 
       // Chrome content scripts are classic scripts, so bundle as IIFE (no import/export).
       await esbuildBuild({
-        entryPoints: [resolve(__dirname, "extension/content/content.entry.ts")],
+        entryPoints: [
+          resolve(__dirname, "extension/content/content.entry.ts"),
+          resolve(__dirname, "extension/content/outlook.entry.ts")
+        ],
         bundle: true,
         format: "iife",
         platform: "browser",
         target: "chrome114",
         minify: true,
-        outfile: resolve(contentTarget, "content.entry.js")
+        outdir: contentTarget,
+        entryNames: "[name]"
       });
 
       cpSync(resolve(__dirname, "extension/manifest.json"), resolve(dist, "manifest.json"));
