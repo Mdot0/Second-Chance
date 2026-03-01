@@ -2,9 +2,15 @@
   "manifest_version": 3,
   "name": "Second Chance",
   "version": "0.1.0",
-  "description": "Adds a timed pause before sending Gmail messages.",
+  "description": "Adds a timed pause before sending Gmail and Outlook messages.",
   "permissions": ["storage"],
-  "host_permissions": ["https://mail.google.com/*", "https://api.languagetool.org/*"],
+  "host_permissions": [
+    "https://mail.google.com/*",
+    "https://outlook.live.com/*",
+    "https://outlook.office.com/*",
+    "https://outlook.office365.com/*",
+    "https://api.languagetool.org/*"
+  ],
   "icons": {
     "16": "assets/icons/icon16.png",
     "32": "assets/icons/icon32.png",
@@ -15,6 +21,16 @@
     {
       "matches": ["https://mail.google.com/*"],
       "js": ["content/content.entry.js"],
+      "css": ["content/ui/styles.css"],
+      "run_at": "document_start"
+    },
+    {
+      "matches": [
+        "https://outlook.live.com/*",
+        "https://outlook.office.com/*",
+        "https://outlook.office365.com/*"
+      ],
+      "js": ["content/outlook.entry.js"],
       "css": ["content/ui/styles.css"],
       "run_at": "document_start"
     }
