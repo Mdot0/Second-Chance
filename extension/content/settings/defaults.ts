@@ -8,6 +8,7 @@ export type PauseSettings = {
   checkFormatting: boolean;
   strictness: StrictnessMode;
   customDictionary: string[];
+  useOnlineCheck: boolean;
 };
 
 export const SETTINGS_KEY = "microPauseSettings";
@@ -21,5 +22,6 @@ export const DEFAULT_SETTINGS: PauseSettings = {
   checkGrammar: true,
   checkFormatting: true,
   strictness: "balanced",
-  customDictionary: []
+  customDictionary: [],
+  useOnlineCheck: false
 };

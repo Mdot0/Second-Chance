@@ -9,6 +9,7 @@ type Elements = {
   checkGrammar: HTMLInputElement;
   checkFormatting: HTMLInputElement;
   strictness: HTMLSelectElement;
+  useOnlineCheck: HTMLInputElement;
   status: HTMLParagraphElement;
   delayHint: HTMLSpanElement;
 };
@@ -21,6 +22,7 @@ function getElements(): Elements {
   const checkGrammar = document.getElementById("checkGrammar");
   const checkFormatting = document.getElementById("checkFormatting");
   const strictness = document.getElementById("strictness");
+  const useOnlineCheck = document.getElementById("useOnlineCheck");
   const status = document.getElementById("status");
   const delayHint = document.getElementById("delay-hint");
 
@@ -32,6 +34,7 @@ function getElements(): Elements {
     !(checkGrammar instanceof HTMLInputElement) ||
     !(checkFormatting instanceof HTMLInputElement) ||
     !(strictness instanceof HTMLSelectElement) ||
+    !(useOnlineCheck instanceof HTMLInputElement) ||
     !(status instanceof HTMLParagraphElement) ||
     !(delayHint instanceof HTMLSpanElement)
   ) {
@@ -46,6 +49,7 @@ function getElements(): Elements {
     checkGrammar,
     checkFormatting,
     strictness,
+    useOnlineCheck,
     status,
     delayHint
   };
@@ -92,6 +96,7 @@ async function initPopup(): Promise<void> {
     elements.checkGrammar.checked = settings.checkGrammar;
     elements.checkFormatting.checked = settings.checkFormatting;
     elements.strictness.value = settings.strictness;
+    elements.useOnlineCheck.checked = settings.useOnlineCheck;
   } catch {
     setStatus(elements, "Could not load settings. Chrome storage may be unavailable.", true);
   }
@@ -108,7 +113,8 @@ async function initPopup(): Promise<void> {
         checkTone: elements.checkTone.checked,
         checkGrammar: elements.checkGrammar.checked,
         checkFormatting: elements.checkFormatting.checked,
-        strictness: elements.strictness.value === "strict" ? "strict" : "balanced"
+        strictness: elements.strictness.value === "strict" ? "strict" : "balanced",
+        useOnlineCheck: elements.useOnlineCheck.checked
       });
 
       elements.delaySeconds.value = String(saved.delaySeconds);
