@@ -122,7 +122,7 @@ function hasLineBreakAfterComma(text: string, commaIndex: number): boolean {
 }
 
 function isCommaSpacingAcrossLineBreak(issue: AnalysisIssue, bodyRaw: string): boolean {
-  if (issue.category !== "formatting" || issue.location !== "body") {
+  if (issue.location !== "body") {
     return false;
   }
 
@@ -241,23 +241,6 @@ function runFormattingChecks(context: ComposeContext, issueMap: Record<IssueCate
       severity: "low",
       message: "Trailing spaces detected.",
       evidence: trailingSpaceLine,
-      location: "body"
-    });
-  }
-
-  const textBlocks = bodyBlocks.filter((block) => block.type === "paragraph" || block.type === "quote");
-  const shortTextBlockCount = textBlocks.filter((block) => block.text.length > 0 && block.text.length <= 45).length;
-  if (
-    textBlocks.length >= 5 &&
-    shortTextBlockCount / textBlocks.length >= 0.8 &&
-    !hasBulletListItems &&
-    !hasNumberListItems
-  ) {
-    addIssue(issueMap, {
-      category: "formatting",
-      severity: "low",
-      message: "Body looks split into many short lines. Consider combining into full paragraphs.",
-      evidence: `${shortTextBlockCount} short text blocks`,
       location: "body"
     });
   }

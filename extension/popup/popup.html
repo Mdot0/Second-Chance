@@ -48,9 +48,11 @@
         <div class="settings-section">
           <p class="section-label">Configuration</p>
           <div class="field">
-            <label class="field-label" for="delaySeconds">Base delay (seconds)</label>
-            <input id="delaySeconds" type="number" min="0" max="30" />
-            <span id="delay-hint" class="field-hint" aria-live="polite"></span>
+            <div class="delay-header">
+              <label class="field-label" for="delaySeconds">Base delay</label>
+              <span id="delay-readout" class="delay-readout" aria-live="polite">20s</span>
+            </div>
+            <input id="delaySeconds" type="range" min="0" max="60" step="1" />
           </div>
           <div class="field field--divided">
             <label class="field-label" for="strictness">Strictness</label>
@@ -62,6 +64,7 @@
         </div>
 
         <div class="actions">
+          <button type="button" id="resetBtn" class="btn-reset">Reset to Defaults</button>
           <button type="submit" id="saveBtn">Save Settings</button>
         </div>
         <p id="status" class="status" aria-live="polite"></p>

@@ -62,7 +62,6 @@ function createSummaryRow(headline: string, issues: AnalysisIssue[]): HTMLElemen
 
     const details = document.createElement("ul");
     details.className = "micro-pause-details-list";
-    details.style.display = "none";
 
     issues.forEach((issue) => {
       const item = document.createElement("li");
@@ -75,7 +74,7 @@ function createSummaryRow(headline: string, issues: AnalysisIssue[]): HTMLElemen
       const expanded = toggle.getAttribute("aria-expanded") === "true";
       toggle.setAttribute("aria-expanded", expanded ? "false" : "true");
       toggle.textContent = expanded ? "View details" : "Hide details";
-      details.style.display = expanded ? "none" : "grid";
+      details.classList.toggle("micro-pause-details-list--open", !expanded);
     });
 
     row.append(toggle, details);
@@ -202,12 +201,16 @@ export function openPauseModal(options: PauseModalOptions): Promise<PauseModalRe
     options.analysisPromise
       .then((analysis) => {
         if (!settled) {
-          skeletonSection.replaceWith(buildContextSection(analysis));
+          const contextSection = buildContextSection(analysis);
+          contextSection.classList.add("micro-pause-context--entering");
+          skeletonSection.replaceWith(contextSection);
         }
       })
       .catch(() => {
         if (!settled) {
-          skeletonSection.replaceWith(buildErrorSection());
+          const errorSection = buildErrorSection();
+          errorSection.classList.add("micro-pause-context--entering");
+          skeletonSection.replaceWith(errorSection);
         }
       });
 
@@ -229,7 +232,8 @@ export function openPauseModal(options: PauseModalOptions): Promise<PauseModalRe
       settled = true;
       window.clearInterval(timer);
       trap.deactivate();
-      overlay.remove();
+      overlay.classList.add("micro-pause-overlay--closing");
+      window.setTimeout(() => overlay.remove(), 190);
       if (activeModal?.settle === settle) {
         activeModal = null;
       }

@@ -289,13 +289,6 @@ function parseBodyBlocks(strippedBody: HTMLElement | null): BodyBlock[] {
   return trimBoundaryBlankBlocks(blocks);
 }
 
-function parseBodyRaw(strippedBody: HTMLElement | null): string {
-  if (!strippedBody) {
-    return "";
-  }
-  return cleanRawText(strippedBody.innerText || strippedBody.textContent);
-}
-
 function isComposeRoot(root: HTMLElement): boolean {
   const hasBody = Boolean(getBodyElement(root));
   const hasSubject = Boolean(root.querySelector("input[name='subjectbox']"));
@@ -348,7 +341,16 @@ export function findComposeRootFromNode(node: Node | null): HTMLElement | null {
 export function buildComposeContext(composeRoot: HTMLElement): ComposeContext {
   const body = getBodyElement(composeRoot);
   const strippedBody = body ? stripQuotedContent(body) : null;
-  const bodyRaw = parseBodyRaw(strippedBody);
+  const bodyBlocks = parseBodyBlocks(strippedBody);
+
+  // Derive bodyRaw from the DOM-walked blocks rather than innerText on the
+  // disconnected clone. Chrome skips block-level newlines for off-DOM nodes,
+  // so innerText collapses "Good Morning,\n\nHi" into "Good Morning,Hi",
+  // which makes LanguageTool flag the comma as missing a space.
+  const bodyRaw =
+    bodyBlocks.length > 0
+      ? bodyBlocks.map((b) => (b.type === "blank" ? "" : b.text)).join("\n")
+      : cleanRawText(strippedBody?.innerText ?? strippedBody?.textContent);
 
   return {
     toCount: parseRecipientCount(composeRoot),
@@ -356,6 +358,6 @@ export function buildComposeContext(composeRoot: HTMLElement): ComposeContext {
     subject: parseSubject(composeRoot),
     bodyText: cleanText(bodyRaw),
     bodyRaw,
-    bodyBlocks: parseBodyBlocks(strippedBody)
+    bodyBlocks
   };
 }
