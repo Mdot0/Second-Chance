@@ -8,3 +8,5 @@ Thumbs.db
 .ignored_*
 .vscode/
 CLAUDE.md
+.agents/
+skills-lock.json

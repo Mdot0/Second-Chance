@@ -5,37 +5,50 @@ type Elements = {
   form: HTMLFormElement;
   enabled: HTMLInputElement;
   delaySeconds: HTMLInputElement;
-  smartPause: HTMLInputElement;
-  keywords: HTMLTextAreaElement;
+  checkTone: HTMLInputElement;
+  checkGrammar: HTMLInputElement;
+  checkFormatting: HTMLInputElement;
+  strictness: HTMLSelectElement;
   status: HTMLParagraphElement;
   delayHint: HTMLSpanElement;
-  keywordsHint: HTMLSpanElement;
 };
 
 function getElements(): Elements {
   const form = document.getElementById("settings-form");
   const enabled = document.getElementById("enabled");
   const delaySeconds = document.getElementById("delaySeconds");
-  const smartPause = document.getElementById("smartPause");
-  const keywords = document.getElementById("keywords");
+  const checkTone = document.getElementById("checkTone");
+  const checkGrammar = document.getElementById("checkGrammar");
+  const checkFormatting = document.getElementById("checkFormatting");
+  const strictness = document.getElementById("strictness");
   const status = document.getElementById("status");
   const delayHint = document.getElementById("delay-hint");
-  const keywordsHint = document.getElementById("keywords-hint");
 
   if (
     !(form instanceof HTMLFormElement) ||
     !(enabled instanceof HTMLInputElement) ||
     !(delaySeconds instanceof HTMLInputElement) ||
-    !(smartPause instanceof HTMLInputElement) ||
-    !(keywords instanceof HTMLTextAreaElement) ||
+    !(checkTone instanceof HTMLInputElement) ||
+    !(checkGrammar instanceof HTMLInputElement) ||
+    !(checkFormatting instanceof HTMLInputElement) ||
+    !(strictness instanceof HTMLSelectElement) ||
     !(status instanceof HTMLParagraphElement) ||
-    !(delayHint instanceof HTMLSpanElement) ||
-    !(keywordsHint instanceof HTMLSpanElement)
+    !(delayHint instanceof HTMLSpanElement)
   ) {
     throw new Error("Popup elements are missing.");
   }
 
-  return { form, enabled, delaySeconds, smartPause, keywords, status, delayHint, keywordsHint };
+  return {
+    form,
+    enabled,
+    delaySeconds,
+    checkTone,
+    checkGrammar,
+    checkFormatting,
+    strictness,
+    status,
+    delayHint
+  };
 }
 
 function setStatus(elements: Elements, message: string, isError = false): void {
@@ -49,10 +62,6 @@ function clearStatus(elements: Elements): void {
   elements.status.classList.remove("status--error", "status--saved");
 }
 
-function parseKeywords(raw: string): string[] {
-  return [...new Set(raw.split(",").map((k) => k.trim().toLowerCase()).filter(Boolean))];
-}
-
 function clampDelay(value: number): number {
   if (!Number.isFinite(value)) {
     return DEFAULT_SETTINGS.delaySeconds;
@@ -63,21 +72,12 @@ function clampDelay(value: number): number {
 function validateDelay(elements: Elements): void {
   const raw = Number(elements.delaySeconds.value);
   if (!Number.isFinite(raw)) {
-    elements.delayHint.textContent = `Invalid value — will use ${DEFAULT_SETTINGS.delaySeconds}s`;
+    elements.delayHint.textContent = `Invalid value. Defaulting to ${DEFAULT_SETTINGS.delaySeconds}s.`;
   } else if (raw < MIN_DELAY_SECONDS || raw > MAX_DELAY_SECONDS) {
     const clamped = clampDelay(raw);
-    elements.delayHint.textContent = `Must be ${MIN_DELAY_SECONDS}–${MAX_DELAY_SECONDS}. Will be saved as ${clamped}s`;
+    elements.delayHint.textContent = `Allowed range is ${MIN_DELAY_SECONDS}-${MAX_DELAY_SECONDS}. Will save as ${clamped}s.`;
   } else {
     elements.delayHint.textContent = "";
-  }
-}
-
-function validateKeywords(elements: Elements): void {
-  const parsed = parseKeywords(elements.keywords.value);
-  if (parsed.length === 0) {
-    elements.keywordsHint.textContent = `Empty list — defaults will apply (${DEFAULT_SETTINGS.keywords.join(", ")})`;
-  } else {
-    elements.keywordsHint.textContent = "";
   }
 }
 
@@ -88,38 +88,36 @@ async function initPopup(): Promise<void> {
     const settings = await getSettings();
     elements.enabled.checked = settings.enabled;
     elements.delaySeconds.value = String(settings.delaySeconds);
-    elements.smartPause.checked = settings.smartPause;
-    elements.keywords.value = settings.keywords.join(", ");
+    elements.checkTone.checked = settings.checkTone;
+    elements.checkGrammar.checked = settings.checkGrammar;
+    elements.checkFormatting.checked = settings.checkFormatting;
+    elements.strictness.value = settings.strictness;
   } catch {
-    setStatus(elements, "Could not load settings — Chrome storage may be unavailable.", true);
+    setStatus(elements, "Could not load settings. Chrome storage may be unavailable.", true);
   }
 
   elements.delaySeconds.addEventListener("input", () => validateDelay(elements));
-  elements.keywords.addEventListener("input", () => validateKeywords(elements));
 
   elements.form.addEventListener("submit", async (event) => {
     event.preventDefault();
 
-    const delay = clampDelay(Number(elements.delaySeconds.value));
-    const keywords = parseKeywords(elements.keywords.value);
-
     try {
       const saved = await setSettings({
         enabled: elements.enabled.checked,
-        delaySeconds: delay,
-        smartPause: elements.smartPause.checked,
-        keywords
+        delaySeconds: clampDelay(Number(elements.delaySeconds.value)),
+        checkTone: elements.checkTone.checked,
+        checkGrammar: elements.checkGrammar.checked,
+        checkFormatting: elements.checkFormatting.checked,
+        strictness: elements.strictness.value === "strict" ? "strict" : "balanced"
       });
 
       elements.delaySeconds.value = String(saved.delaySeconds);
-      elements.keywords.value = saved.keywords.join(", ");
+      elements.strictness.value = saved.strictness;
       elements.delayHint.textContent = "";
-      elements.keywordsHint.textContent = "";
-
       setStatus(elements, "Saved");
-      window.setTimeout(() => clearStatus(elements), 1200);
+      window.setTimeout(() => clearStatus(elements), 1300);
     } catch {
-      setStatus(elements, "Could not save — Chrome storage may be unavailable.", true);
+      setStatus(elements, "Could not save settings.", true);
     }
   });
 }

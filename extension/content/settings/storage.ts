@@ -3,24 +3,45 @@ import {
   MAX_DELAY_SECONDS,
   MIN_DELAY_SECONDS,
   SETTINGS_KEY,
-  type PauseSettings
+  type PauseSettings,
+  type StrictnessMode
 } from "./defaults";
 
-function normalizeSettings(input: unknown): PauseSettings {
-  const raw = typeof input === "object" && input ? (input as Partial<PauseSettings>) : {};
-  const delay = Number(raw.delaySeconds ?? DEFAULT_SETTINGS.delaySeconds);
-  const safeDelay = Number.isFinite(delay)
-    ? Math.max(MIN_DELAY_SECONDS, Math.min(MAX_DELAY_SECONDS, Math.round(delay)))
-    : DEFAULT_SETTINGS.delaySeconds;
+type LegacySettings = {
+  smartPause?: boolean;
+};
 
-  const rawKeywords = Array.isArray(raw.keywords) ? raw.keywords : DEFAULT_SETTINGS.keywords;
-  const keywords = [...new Set(rawKeywords.map((k) => String(k).trim().toLowerCase()).filter(Boolean))];
+function isStrictness(value: unknown): value is StrictnessMode {
+  return value === "balanced" || value === "strict";
+}
+
+function normalizeDelay(input: unknown): number {
+  const delay = Number(input ?? DEFAULT_SETTINGS.delaySeconds);
+  if (!Number.isFinite(delay)) {
+    return DEFAULT_SETTINGS.delaySeconds;
+  }
+  return Math.max(MIN_DELAY_SECONDS, Math.min(MAX_DELAY_SECONDS, Math.round(delay)));
+}
+
+function normalizeCustomDictionary(input: unknown): string[] {
+  if (!Array.isArray(input)) {
+    return [];
+  }
+  return [...new Set(input.map((item) => String(item).trim().toLowerCase()).filter(Boolean))];
+}
+
+export function normalizeSettings(input: unknown): PauseSettings {
+  const raw = typeof input === "object" && input ? (input as Partial<PauseSettings> & LegacySettings) : {};
+  const legacySmartPause = typeof raw.smartPause === "boolean" ? raw.smartPause : true;
 
   return {
     enabled: raw.enabled ?? DEFAULT_SETTINGS.enabled,
-    delaySeconds: safeDelay,
-    smartPause: raw.smartPause ?? DEFAULT_SETTINGS.smartPause,
-    keywords: keywords.length > 0 ? keywords : DEFAULT_SETTINGS.keywords
+    delaySeconds: normalizeDelay(raw.delaySeconds),
+    checkTone: raw.checkTone ?? legacySmartPause,
+    checkGrammar: raw.checkGrammar ?? legacySmartPause,
+    checkFormatting: raw.checkFormatting ?? legacySmartPause,
+    strictness: isStrictness(raw.strictness) ? raw.strictness : DEFAULT_SETTINGS.strictness,
+    customDictionary: normalizeCustomDictionary((raw as Partial<PauseSettings>).customDictionary)
   };
 }
 
@@ -71,5 +92,3 @@ export function onSettingsChange(
   chrome.storage.onChanged.addListener(listener);
   return () => chrome.storage.onChanged.removeListener(listener);
 }
-
-export { normalizeSettings };

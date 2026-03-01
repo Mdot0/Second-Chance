@@ -3,6 +3,7 @@ export type ComposeContext = {
   hasAttachment: boolean;
   subject: string;
   bodyText: string;
+  bodyRaw: string;
 };
 
 const COMPOSE_ROOT_SELECTORS = [
@@ -15,6 +16,10 @@ const COMPOSE_ROOT_SELECTORS = [
 
 function cleanText(text: string | null | undefined): string {
   return (text ?? "").replace(/\s+/g, " ").trim();
+}
+
+function cleanRawText(text: string | null | undefined): string {
+  return (text ?? "").replace(/\r\n/g, "\n").replace(/\u00a0/g, " ");
 }
 
 function parseRecipientCount(composeRoot: HTMLElement): number {
@@ -60,17 +65,19 @@ function parseSubject(composeRoot: HTMLElement): string {
   return cleanText(subjectInput?.value);
 }
 
-function parseBodyText(composeRoot: HTMLElement): string {
-  const body = composeRoot.querySelector<HTMLElement>(
+function getBodyElement(composeRoot: HTMLElement): HTMLElement | null {
+  return composeRoot.querySelector<HTMLElement>(
     "div[aria-label='Message Body'], div[role='textbox'][contenteditable='true']"
   );
-  return cleanText(body?.innerText || body?.textContent);
+}
+
+function parseBodyRaw(composeRoot: HTMLElement): string {
+  const body = getBodyElement(composeRoot);
+  return cleanRawText(body?.innerText || body?.textContent);
 }
 
 function isComposeRoot(root: HTMLElement): boolean {
-  const hasBody = Boolean(
-    root.querySelector("div[aria-label='Message Body'], div[role='textbox'][contenteditable='true']")
-  );
+  const hasBody = Boolean(getBodyElement(root));
   const hasSubject = Boolean(root.querySelector("input[name='subjectbox']"));
   return hasBody || hasSubject;
 }
@@ -107,7 +114,6 @@ export function findComposeRootFromNode(node: Node | null): HTMLElement | null {
     }
   }
 
-  // Fallback: if Gmail mutates classes, walk up but keep compose-like constraints.
   let current: HTMLElement | null = element as HTMLElement;
   while (current) {
     if (looksLikeComposeContainer(current) && isComposeRoot(current)) {
@@ -120,10 +126,12 @@ export function findComposeRootFromNode(node: Node | null): HTMLElement | null {
 }
 
 export function buildComposeContext(composeRoot: HTMLElement): ComposeContext {
+  const bodyRaw = parseBodyRaw(composeRoot);
   return {
     toCount: parseRecipientCount(composeRoot),
     hasAttachment: parseHasAttachment(composeRoot),
     subject: parseSubject(composeRoot),
-    bodyText: parseBodyText(composeRoot)
+    bodyText: cleanText(bodyRaw),
+    bodyRaw
   };
 }
