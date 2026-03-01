@@ -164,7 +164,7 @@ body {
   outline-offset: 2px;
 }
 
-/* ── Fields (number / select) ── */
+/* ── Fields (select) ── */
 
 .field {
   padding: 11px 13px;
@@ -184,7 +184,6 @@ body {
   color: #94a3b8;
 }
 
-input[type="number"],
 select {
   width: 100%;
   border: 1px solid #e2e8f0;
@@ -198,33 +197,83 @@ select {
   transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
   -webkit-appearance: none;
   appearance: none;
-}
-
-select {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%2394a3b8' stroke-width='1.5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
   background-repeat: no-repeat;
   background-position: right 10px center;
   padding-right: 30px;
 }
 
-input[type="number"]:focus,
 select:focus {
   outline: none;
   border-color: #2563eb;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
-  background: #ffffff;
+  background-color: #ffffff;
 }
 
-.field-hint {
-  min-height: 14px;
-  font-size: 11px;
-  color: #b45309;
+/* ── Delay slider ── */
+
+.delay-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
-/* ── Save button ── */
+.delay-readout {
+  font-size: 13px;
+  font-weight: 700;
+  color: #2563eb;
+  min-width: 28px;
+  text-align: right;
+}
+
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: #e2e8f0;
+  outline: none;
+  cursor: pointer;
+  padding: 0;
+  border: 0;
+  transition: opacity 0.15s;
+}
+
+input[type="range"]:hover {
+  opacity: 0.9;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #2563eb;
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(37, 99, 235, 0.4);
+  transition: transform 0.12s, box-shadow 0.12s;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  transform: scale(1.15);
+  box-shadow: 0 2px 8px rgba(37, 99, 235, 0.5);
+}
+
+input[type="range"]:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* ── Buttons ── */
 
 .actions {
   margin-top: 2px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
 }
 
 button[type="submit"] {
@@ -239,16 +288,18 @@ button[type="submit"] {
   font-weight: 600;
   cursor: pointer;
   letter-spacing: 0.01em;
-  transition: opacity 0.15s, transform 0.1s;
+  transition: opacity 0.15s, transform 0.12s, box-shadow 0.15s;
   box-shadow: 0 2px 10px rgba(37, 99, 235, 0.28);
 }
 
 button[type="submit"]:hover {
-  opacity: 0.9;
+  opacity: 0.92;
+  box-shadow: 0 4px 16px rgba(37, 99, 235, 0.36);
 }
 
 button[type="submit"]:active {
   transform: scale(0.98);
+  box-shadow: 0 1px 6px rgba(37, 99, 235, 0.2);
 }
 
 button[type="submit"]:focus-visible {
@@ -256,7 +307,49 @@ button[type="submit"]:focus-visible {
   outline-offset: 2px;
 }
 
+.btn-reset {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  min-height: 38px;
+  background: #ffffff;
+  color: #475569;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  letter-spacing: 0.01em;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.12s;
+}
+
+.btn-reset:hover {
+  background: #f8fafc;
+  border-color: #94a3b8;
+  color: #0f172a;
+}
+
+.btn-reset:active {
+  transform: scale(0.98);
+  background: #f1f5f9;
+}
+
+.btn-reset:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
 /* ── Status ── */
+
+@keyframes popup-status-in {
+  from {
+    opacity: 0;
+    transform: translateY(-3px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
 .status {
   min-height: 16px;
@@ -268,9 +361,11 @@ button[type="submit"]:focus-visible {
 .status--saved {
   color: #059669;
   font-weight: 500;
+  animation: popup-status-in 0.18s ease-out;
 }
 
 .status--error {
   color: #dc2626;
   font-weight: 500;
+  animation: popup-status-in 0.18s ease-out;
 }

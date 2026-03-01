@@ -9,6 +9,46 @@
   }
 }
 
+@keyframes micro-pause-disappear {
+  from {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.97) translateY(8px);
+  }
+}
+
+@keyframes micro-pause-backdrop-in {
+  from {
+    background: rgba(15, 23, 42, 0);
+  }
+  to {
+    background: rgba(15, 23, 42, 0.58);
+  }
+}
+
+@keyframes micro-pause-backdrop-out {
+  from {
+    background: rgba(15, 23, 42, 0.58);
+  }
+  to {
+    background: rgba(15, 23, 42, 0);
+  }
+}
+
+@keyframes micro-pause-section-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @keyframes micro-pause-pulse {
   0%,
   100% {
@@ -28,6 +68,16 @@
   background: rgba(15, 23, 42, 0.58);
   padding: 16px;
   box-sizing: border-box;
+  animation: micro-pause-backdrop-in 0.22s ease-out forwards;
+}
+
+.micro-pause-overlay--closing {
+  animation: micro-pause-backdrop-out 0.18s ease-in forwards;
+  pointer-events: none;
+}
+
+.micro-pause-overlay--closing .micro-pause-modal {
+  animation: micro-pause-disappear 0.18s ease-in forwards;
 }
 
 .micro-pause-modal {
@@ -123,6 +173,15 @@
   font-size: 13px;
   display: grid;
   gap: 4px;
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: max-height 0.28s ease, opacity 0.22s ease;
+}
+
+.micro-pause-details-list--open {
+  max-height: 500px;
+  opacity: 1;
 }
 
 .micro-pause-countdown {
@@ -231,6 +290,29 @@
 .micro-pause-context--clear .micro-pause-context-empty {
   color: #166534;
   font-weight: 500;
+}
+
+/* ── Context section entering animation ── */
+.micro-pause-context--entering {
+  animation: micro-pause-section-in 0.22s ease-out;
+}
+
+/* ── Button hover transitions ── */
+.micro-pause-btn {
+  transition: opacity 0.15s, transform 0.12s, box-shadow 0.15s;
+}
+
+.micro-pause-btn-cancel:hover {
+  background: #e2e8f0;
+}
+
+.micro-pause-btn-confirm:hover {
+  opacity: 0.9;
+  box-shadow: 0 2px 10px rgba(37, 99, 235, 0.3);
+}
+
+.micro-pause-btn:active {
+  transform: scale(0.97);
 }
 
 @media (max-width: 480px) {

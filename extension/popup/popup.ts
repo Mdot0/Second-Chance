@@ -10,7 +10,8 @@ type Elements = {
   checkFormatting: HTMLInputElement;
   strictness: HTMLSelectElement;
   status: HTMLParagraphElement;
-  delayHint: HTMLSpanElement;
+  delayReadout: HTMLSpanElement;
+  resetBtn: HTMLButtonElement;
 };
 
 function getElements(): Elements {
@@ -21,7 +22,8 @@ function getElements(): Elements {
   const checkFormatting = document.getElementById("checkFormatting");
   const strictness = document.getElementById("strictness");
   const status = document.getElementById("status");
-  const delayHint = document.getElementById("delay-hint");
+  const delayReadout = document.getElementById("delay-readout");
+  const resetBtn = document.getElementById("resetBtn");
 
   if (
     !(form instanceof HTMLFormElement) ||
@@ -31,7 +33,8 @@ function getElements(): Elements {
     !(checkFormatting instanceof HTMLInputElement) ||
     !(strictness instanceof HTMLSelectElement) ||
     !(status instanceof HTMLParagraphElement) ||
-    !(delayHint instanceof HTMLSpanElement)
+    !(delayReadout instanceof HTMLSpanElement) ||
+    !(resetBtn instanceof HTMLButtonElement)
   ) {
     throw new Error("Popup elements are missing.");
   }
@@ -44,7 +47,8 @@ function getElements(): Elements {
     checkFormatting,
     strictness,
     status,
-    delayHint
+    delayReadout,
+    resetBtn
   };
 }
 
@@ -66,16 +70,11 @@ function clampDelay(value: number): number {
   return Math.max(MIN_DELAY_SECONDS, Math.min(MAX_DELAY_SECONDS, Math.round(value)));
 }
 
-function validateDelay(elements: Elements): void {
-  const raw = Number(elements.delaySeconds.value);
-  if (!Number.isFinite(raw)) {
-    elements.delayHint.textContent = `Invalid value. Defaulting to ${DEFAULT_SETTINGS.delaySeconds}s.`;
-  } else if (raw < MIN_DELAY_SECONDS || raw > MAX_DELAY_SECONDS) {
-    const clamped = clampDelay(raw);
-    elements.delayHint.textContent = `Allowed range is ${MIN_DELAY_SECONDS}-${MAX_DELAY_SECONDS}. Will save as ${clamped}s.`;
-  } else {
-    elements.delayHint.textContent = "";
-  }
+function updateDelayDisplay(elements: Elements): void {
+  const value = clampDelay(Number(elements.delaySeconds.value));
+  elements.delayReadout.textContent = `${value}s`;
+  const pct = ((value - MIN_DELAY_SECONDS) / (MAX_DELAY_SECONDS - MIN_DELAY_SECONDS)) * 100;
+  elements.delaySeconds.style.background = `linear-gradient(to right, #2563eb ${pct}%, #e2e8f0 ${pct}%)`;
 }
 
 function applySettings(elements: Elements, settings: PauseSettings): void {
@@ -84,7 +83,7 @@ function applySettings(elements: Elements, settings: PauseSettings): void {
   elements.checkGrammar.checked = settings.checkGrammar;
   elements.checkFormatting.checked = settings.checkFormatting;
   elements.strictness.value = settings.strictness;
-  validateDelay(elements);
+  updateDelayDisplay(elements);
 }
 
 async function initPopup(): Promise<void> {
@@ -104,7 +103,18 @@ async function initPopup(): Promise<void> {
     window.addEventListener("unload", removeSettingsListener, { once: true });
   }
 
-  elements.delaySeconds.addEventListener("input", () => validateDelay(elements));
+  elements.delaySeconds.addEventListener("input", () => updateDelayDisplay(elements));
+
+  elements.resetBtn.addEventListener("click", async () => {
+    try {
+      const saved = await setSettings(DEFAULT_SETTINGS);
+      applySettings(elements, saved);
+      setStatus(elements, "Reset to defaults");
+      window.setTimeout(() => clearStatus(elements), 1300);
+    } catch {
+      setStatus(elements, "Could not reset settings.", true);
+    }
+  });
 
   elements.form.addEventListener("submit", async (event) => {
     event.preventDefault();

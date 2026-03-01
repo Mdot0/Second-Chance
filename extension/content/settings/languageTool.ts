@@ -70,28 +70,44 @@ function buildMessage(match: LtMatch): string {
 }
 
 function isNewlinePunctuationFalsePositive(match: LtMatch, evidence: string, sourceText: string): boolean {
-  const categoryId = match.rule.category.id;
-  if (categoryId !== "PUNCTUATION" && categoryId !== "TYPOGRAPHY") {
-    return false;
-  }
-
   const ruleMessage = match.message.toLowerCase();
+
   if (ruleMessage.includes("space after the comma")) {
-    const charAtOffset = sourceText.charAt(match.offset);
-    const nextChar = sourceText.charAt(match.offset + 1);
-    if (charAtOffset === "," && (nextChar === "\n" || nextChar === "\r")) {
-      return true;
+    // LT may point offset at the comma itself or at the following word.
+    // Search a small window around match.offset for any comma that is followed by a newline.
+    const windowStart = Math.max(0, match.offset - 1);
+    const windowEnd = Math.min(sourceText.length - 1, match.offset + match.length + 1);
+    for (let i = windowStart; i <= windowEnd; i++) {
+      if (sourceText[i] === ",") {
+        let j = i + 1;
+        let sawNewline = false;
+        while (j < sourceText.length) {
+          const c = sourceText[j];
+          if (c === "\n" || c === "\r" || c === "\u2028" || c === "\u2029") {
+            sawNewline = true;
+            j++;
+          } else if (c === " " || c === "\t") {
+            j++;
+          } else {
+            break;
+          }
+        }
+        if (sawNewline) return true;
+      }
+    }
+
+    // Fallback: derive the expected word from the evidence (",Word") and search the
+    // full source text for a comma-newline-word pattern.
+    const commaWordMatch = evidence.match(/^,\s*([A-Za-z0-9]+)/);
+    if (commaWordMatch) {
+      const escapedWord = commaWordMatch[1].replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const lineBreakPattern = new RegExp(`,[ \\t]*[\\r\\n\\u2028\\u2029]+[ \\t]*${escapedWord}\\b`, "i");
+      if (lineBreakPattern.test(sourceText)) return true;
     }
   }
 
-  if (evidence.includes("\n")) {
-    return true;
-  }
-
-  if (match.context.text.includes("\n")) {
-    return true;
-  }
-
+  if (evidence.includes("\n")) return true;
+  if (match.context.text.includes("\n")) return true;
   const slice = sourceText.slice(match.offset, match.offset + Math.max(match.length, 1));
   return slice.includes("\n");
 }
