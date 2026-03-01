@@ -1,9 +1,9 @@
-import type { AnalysisIssue, PauseAnalysis } from "../settings/smartPause";
+import type { AnalysisIssue, IssueSeverity, PauseAnalysis } from "../settings/smartPause";
 import { createFocusTrap } from "./focusTrap";
 
 export type PauseModalOptions = {
   delaySeconds: number;
-  analysis: PauseAnalysis;
+  analysisPromise: Promise<PauseAnalysis>;
 };
 
 export type PauseModalResult = "confirm" | "cancel";
@@ -19,15 +19,25 @@ function labelForCount(count: number): string {
 }
 
 function issueLine(issue: AnalysisIssue): string {
-  return issue.evidence ? `${issue.message} (${issue.evidence})` : issue.message;
+  const prefix = issue.location ? `[${issue.location === "subject" ? "Subject" : "Body"}] ` : "";
+  return `${prefix}${issue.message}`;
 }
 
-function createSummaryRow(
-  headline: string,
-  issues: AnalysisIssue[]
-): HTMLElement {
+function worstSeverity(issues: AnalysisIssue[]): IssueSeverity | null {
+  if (issues.some((i) => i.severity === "high")) return "high";
+  if (issues.some((i) => i.severity === "medium")) return "medium";
+  if (issues.length > 0) return "low";
+  return null;
+}
+
+function createSummaryRow(headline: string, issues: AnalysisIssue[]): HTMLElement {
   const row = document.createElement("div");
   row.className = "micro-pause-summary-row";
+
+  const severity = worstSeverity(issues);
+  if (severity) {
+    row.dataset.severity = severity;
+  }
 
   const heading = document.createElement("div");
   heading.className = "micro-pause-summary-headline";
@@ -57,6 +67,7 @@ function createSummaryRow(
     issues.forEach((issue) => {
       const item = document.createElement("li");
       item.textContent = issueLine(issue);
+      item.dataset.severity = issue.severity;
       details.append(item);
     });
 
@@ -73,6 +84,24 @@ function createSummaryRow(
   return row;
 }
 
+function buildSkeletonSection(): HTMLElement {
+  const section = document.createElement("section");
+  section.className = "micro-pause-context micro-pause-context--loading";
+
+  const heading = document.createElement("h3");
+  heading.className = "micro-pause-context-title";
+  heading.textContent = "Analysing email\u2026";
+  section.append(heading);
+
+  for (let i = 0; i < 3; i++) {
+    const line = document.createElement("div");
+    line.className = "micro-pause-skeleton-line";
+    section.append(line);
+  }
+
+  return section;
+}
+
 function buildContextSection(analysis: PauseAnalysis): HTMLElement {
   const section = document.createElement("section");
   section.className = "micro-pause-context";
@@ -83,9 +112,10 @@ function buildContextSection(analysis: PauseAnalysis): HTMLElement {
   section.append(heading);
 
   if (analysis.summaries.length === 0) {
+    section.classList.add("micro-pause-context--clear");
     const empty = document.createElement("p");
     empty.className = "micro-pause-context-empty";
-    empty.textContent = "No major issues found, but take a final look before sending.";
+    empty.textContent = "Looks good! No major issues found.";
     section.append(empty);
     return section;
   }
@@ -93,6 +123,23 @@ function buildContextSection(analysis: PauseAnalysis): HTMLElement {
   analysis.summaries.forEach((summary) => {
     section.append(createSummaryRow(summary.headline, analysis.issuesByCategory[summary.category]));
   });
+
+  return section;
+}
+
+function buildErrorSection(): HTMLElement {
+  const section = document.createElement("section");
+  section.className = "micro-pause-context";
+
+  const heading = document.createElement("h3");
+  heading.className = "micro-pause-context-title";
+  heading.textContent = "Generalized context";
+  section.append(heading);
+
+  const msg = document.createElement("p");
+  msg.className = "micro-pause-context-empty";
+  msg.textContent = "Analysis unavailable. Take a moment to review before sending.";
+  section.append(msg);
 
   return section;
 }
@@ -132,7 +179,7 @@ export function openPauseModal(options: PauseModalOptions): Promise<PauseModalRe
     countdown.textContent = `Sending in ${remaining}s`;
     countdown.dataset.urgency = remaining <= 3 ? "high" : remaining <= 6 ? "medium" : "low";
 
-    const contextSection = buildContextSection(options.analysis);
+    const skeletonSection = buildSkeletonSection();
 
     const actions = document.createElement("div");
     actions.className = "micro-pause-actions";
@@ -148,9 +195,21 @@ export function openPauseModal(options: PauseModalOptions): Promise<PauseModalRe
     confirmButton.textContent = "Send Now";
 
     actions.append(cancelButton, confirmButton);
-    modal.append(title, subtitle, contextSection, countdown, actions);
+    modal.append(title, subtitle, skeletonSection, countdown, actions);
     overlay.append(modal);
     document.body.append(overlay);
+
+    options.analysisPromise
+      .then((analysis) => {
+        if (!settled) {
+          skeletonSection.replaceWith(buildContextSection(analysis));
+        }
+      })
+      .catch(() => {
+        if (!settled) {
+          skeletonSection.replaceWith(buildErrorSection());
+        }
+      });
 
     const trap = createFocusTrap(modal, () => settle("cancel"));
     const timer = window.setInterval(() => {

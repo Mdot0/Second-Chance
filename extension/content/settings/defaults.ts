@@ -3,12 +3,10 @@ export type StrictnessMode = "balanced" | "strict";
 export type PauseSettings = {
   enabled: boolean;
   delaySeconds: number;
-  checkTone: boolean;
   checkGrammar: boolean;
   checkFormatting: boolean;
   strictness: StrictnessMode;
   customDictionary: string[];
-  useOnlineCheck: boolean;
 };
 
 export const SETTINGS_KEY = "microPauseSettings";
@@ -17,11 +15,9 @@ export const MAX_DELAY_SECONDS = 30;
 
 export const DEFAULT_SETTINGS: PauseSettings = {
   enabled: true,
-  delaySeconds: 5,
-  checkTone: true,
+  delaySeconds: 20,
   checkGrammar: true,
   checkFormatting: true,
   strictness: "balanced",
-  customDictionary: [],
-  useOnlineCheck: false
+  customDictionary: []
 };

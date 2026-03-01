@@ -37,12 +37,10 @@ export function normalizeSettings(input: unknown): PauseSettings {
   return {
     enabled: raw.enabled ?? DEFAULT_SETTINGS.enabled,
     delaySeconds: normalizeDelay(raw.delaySeconds),
-    checkTone: raw.checkTone ?? legacySmartPause,
     checkGrammar: raw.checkGrammar ?? legacySmartPause,
     checkFormatting: raw.checkFormatting ?? legacySmartPause,
     strictness: isStrictness(raw.strictness) ? raw.strictness : DEFAULT_SETTINGS.strictness,
-    customDictionary: normalizeCustomDictionary((raw as Partial<PauseSettings>).customDictionary),
-    useOnlineCheck: raw.useOnlineCheck ?? DEFAULT_SETTINGS.useOnlineCheck
+    customDictionary: normalizeCustomDictionary((raw as Partial<PauseSettings>).customDictionary)
   };
 }
 

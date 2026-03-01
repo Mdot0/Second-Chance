@@ -5,6 +5,7 @@ type AttemptTrigger = "click" | "shortcut";
 
 export type SendAttempt = {
   composeRoot: HTMLElement;
+  sendButton: HTMLElement;
   trigger: AttemptTrigger;
   event: Event;
 };
@@ -20,20 +21,31 @@ function blockSendEvent(event: Event): void {
 }
 
 function shouldIgnoreFromOverlayTarget(target: EventTarget | null): boolean {
-  return target instanceof Element && Boolean(target.closest("#micro-pause-overlay"));
+  if (target instanceof Element) {
+    return Boolean(target.closest("#micro-pause-overlay"));
+  }
+  if (target instanceof Node) {
+    return Boolean(target.parentElement?.closest("#micro-pause-overlay"));
+  }
+  return false;
 }
 
 export function startSendInterception(onAttempt: InterceptHandler): () => void {
   const lastAttemptByCompose = new WeakMap<HTMLElement, number>();
 
-  const dispatchAttempt = (composeRoot: HTMLElement, trigger: AttemptTrigger, event: Event): void => {
+  const dispatchAttempt = (
+    composeRoot: HTMLElement,
+    sendButton: HTMLElement,
+    trigger: AttemptTrigger,
+    event: Event
+  ): void => {
     const now = Date.now();
     const lastAttempt = lastAttemptByCompose.get(composeRoot) ?? 0;
     if (now - lastAttempt < DEDUPE_MS) {
       return;
     }
     lastAttemptByCompose.set(composeRoot, now);
-    void Promise.resolve(onAttempt({ composeRoot, trigger, event })).catch((error) => {
+    void Promise.resolve(onAttempt({ composeRoot, sendButton, trigger, event })).catch((error) => {
       console.error("Second-Chance send interception callback failed.", error);
     });
   };
@@ -54,7 +66,7 @@ export function startSendInterception(onAttempt: InterceptHandler): () => void {
     }
 
     blockSendEvent(event);
-    dispatchAttempt(composeRoot, "click", event);
+    dispatchAttempt(composeRoot, sendButton, "click", event);
   };
 
   const onPointerDown = (event: PointerEvent): void => {
@@ -73,7 +85,7 @@ export function startSendInterception(onAttempt: InterceptHandler): () => void {
     }
 
     blockSendEvent(event);
-    dispatchAttempt(composeRoot, "click", event);
+    dispatchAttempt(composeRoot, sendButton, "click", event);
   };
 
   const onKeyDown = (event: KeyboardEvent): void => {
@@ -92,7 +104,7 @@ export function startSendInterception(onAttempt: InterceptHandler): () => void {
     }
 
     blockSendEvent(event);
-    dispatchAttempt(composeRoot, "shortcut", event);
+    dispatchAttempt(composeRoot, sendButton, "shortcut", event);
   };
 
   document.addEventListener("pointerdown", onPointerDown, true);
