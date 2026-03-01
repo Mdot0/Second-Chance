@@ -9,6 +9,7 @@
     "https://outlook.live.com/*",
     "https://outlook.office.com/*",
     "https://outlook.office365.com/*",
+    "https://outlook.cloud.microsoft/*",
     "https://api.languagetool.org/*"
   ],
   "icons": {
@@ -28,7 +29,8 @@
       "matches": [
         "https://outlook.live.com/*",
         "https://outlook.office.com/*",
-        "https://outlook.office365.com/*"
+        "https://outlook.office365.com/*",
+        "https://outlook.cloud.microsoft/*"
       ],
       "js": ["content/outlook.entry.js"],
       "css": ["content/ui/styles.css"],
