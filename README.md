@@ -1,137 +1,256 @@
-# Second-Chance
+# Second Chance
 
-Chrome extension baseline for "Micro-Pause": intercept Gmail sends, show a timed confirmation modal, and persist settings in extension storage.
+> **Everyone Gets Second Chances.**
 
-## Baseline Architecture
+A Manifest V3 Chrome extension that intercepts email sends on **Gmail** and **Outlook**, pauses with a countdown modal, and surfaces grammar issues, formatting problems, profanity, and context warnings before the message leaves your outbox.
 
-```text
-extension/
-  manifest.json
-  content/
-    content.entry.ts
-    interceptor/
-      intercept.ts
-      composeContext.ts
-      sendTrigger.ts
-    ui/
-      modal.ts
-      focusTrap.ts
-      styles.css
-    settings/
-      defaults.ts
-      storage.ts
-      smartPause.ts
-  popup/
-    popup.html
-    popup.ts
-    popup.css
-  assets/
-    icons/
+---
+
+## Why?
+
+Have you ever hit Send and immediately noticed a typo in the subject line? Accidentally left a placeholder in the body? Forgotten to attach the file you mentioned? Sent a reply-all to the entire company when you meant to reply only to one person?
+
+We've all been there. Email is permanent — once it's sent, it's gone. Second Chance gives you a short window after every send to catch those mistakes before they reach anyone's inbox. It's not about slowing you down; it's about giving yourself the few seconds you never knew you needed.
+
+---
+
+## Features
+
+### Countdown Pause Modal
+
+Every time you hit Send (click or Ctrl/Cmd+Enter), Second Chance intercepts the action and shows a modal with a live countdown timer. The email only sends when the timer reaches zero or you actively click **Send Now**. Click **Keep Editing** or press Escape at any point to go back to your draft.
+
+- Default base delay: **20 seconds** (configurable 0–60 s)
+- Keyboard accessible: Enter to confirm send, Escape to cancel, full focus trap
+- Timer urgency changes colour as it counts down (low → medium → high)
+
+### Intelligent Delay Scaling
+
+Selecting **Strict** mode applies a ×1.35 multiplier on top of the weighted delay. The total is always clamped between 0 and 60 seconds.
+
+### Grammar Checking (LanguageTool)
+
+When grammar checking is enabled, the extension sends the subject and body to the [LanguageTool public API](https://languagetool.org/) and maps matches back to issues shown in the modal. False positives at line breaks (e.g. "missing space after comma" where the comma is followed by a newline) are filtered out automatically. Words in the custom dictionary are ignored.
+
+- Up to 12 issues surfaced per email section
+- Timeout: 5 seconds — the modal still works if the API is slow or unreachable
+- Categories mapped: grammar, formatting, tone
+
+### Formatting Checks
+
+Run locally with no API calls:
+
+- Mixed tab and space indentation
+- Large blank gaps (4+ consecutive empty lines)
+- Mixed bullet styles (dashes/asterisks alongside numbered lists)
+- Trailing whitespace on any line
+- Inconsistent indentation depth across body blocks
+
+### Profanity & Tone Detection
+
+Two-layer detection, both running locally:
+
+1. **Manual list** — severity-mapped words (`high` / `medium`) checked against raw and leet-normalized text (e.g. `@` → `a`, `3` → `e`, `0` → `o`)
+2. **leo-profanity extended list** — broad coverage for words not in the manual list, checked on normalized text only
+
+### Context Warnings
+
+Checks that require no API:
+
+| Situation | Severity |
+|---|---|
+| 2–3 recipients | Low |
+| 4–6 recipients | Medium |
+| 7+ recipients | High |
+| Attachment present | Medium |
+| Attachment mentioned in text but no file attached | **High** |
+
+### Analysis Modal UI
+
+While LanguageTool fetches in the background, the modal shows a skeleton loading state ("Analysing email…"). Results are swapped in as soon as the API responds — the countdown keeps running either way.
+
+Each detected category shows a collapsible **View details** row listing every individual issue with its location (Subject / Body) and severity colour-coded. If nothing is found, the modal shows "Looks good! No major issues found."
+
+---
+
+## Supported Platforms
+
+| Platform | URL patterns |
+|---|---|
+| Gmail | `https://mail.google.com/*` |
+| Outlook (personal) | `https://outlook.live.com/*` |
+| Outlook (work) | `https://outlook.office.com/*` |
+| Outlook 365 | `https://outlook.office365.com/*` |
+| Outlook (Microsoft Cloud) | `https://outlook.cloud.microsoft/*` |
+
+---
+
+## Settings
+
+Open the extension popup from the browser toolbar to configure:
+
+| Setting | Default | Description |
+|---|---|---|
+| Enable pause before send | On | Master toggle |
+| Grammar quality | On | Calls LanguageTool API on send |
+| Formatting & indentation | On | Local formatting checks |
+| Base delay | 20 s | Starting countdown length (0–60 s slider) |
+| Strictness | Balanced | Strict applies a ×1.35 multiplier to the weighted delay |
+
+---
+
+## Installation (Development)
+
+```bash
+pnpm install --frozen-lockfile
+pnpm build
 ```
 
-## Module Responsibilities
+1. Open `chrome://extensions`
+2. Enable **Developer mode**
+3. Click **Load unpacked** and select the `dist/` folder
+4. Open Gmail or Outlook and compose an email
 
-- `content.entry.ts`: bootstraps content script, coordinates interception + settings + modal + final send.
-- `interceptor/intercept.ts`: captures send attempts (click and Ctrl/Cmd+Enter).
-- `interceptor/composeContext.ts`: extracts recipients, subject, body, attachment signal.
-- `interceptor/sendTrigger.ts`: finds Gmail send button and triggers native send with bypass marker.
-- `settings/defaults.ts`: shared settings types/defaults.
-- `settings/storage.ts`: `chrome.storage.local` read/write and settings normalization.
-- `settings/smartPause.ts`: smart delay decision logic and reasons.
-- `ui/modal.ts`: countdown modal (confirm/cancel).
-- `ui/focusTrap.ts`: keyboard focus trapping and Escape behavior.
-- `popup/*`: settings editor UI.
+After any source change, run `pnpm build`, then click the reload icon next to the extension on `chrome://extensions` and refresh the email tab.
 
-## Shared Interfaces (Do Not Break Without Team Sync)
+For watch mode during development:
 
-- `PauseSettings`:
-  - `enabled: boolean`
-  - `delaySeconds: number`
-  - `smartPause: boolean`
-  - `keywords: string[]`
-- `storage.ts`:
-  - `getSettings(): Promise<PauseSettings>`
-  - `setSettings(patch: Partial<PauseSettings>): Promise<PauseSettings>`
-  - `onSettingsChange(cb): (() => void) | undefined`
-- `smartPause.ts`:
-  - `computePauseDecision(context, settings): { delaySeconds: number; reasons: string[] }`
-- `composeContext.ts`:
-  - `buildComposeContext(composeRoot): ComposeContext`
-  - `findComposeRootFromNode(node): HTMLElement | null`
+```bash
+pnpm dev
+```
 
-## Team Assignment
+---
 
-### Matthew (Core Integration - Largest Task)
+## Architecture
 
-Own files:
-- `extension/content/content.entry.ts`
-- `extension/content/interceptor/intercept.ts`
-- `extension/content/interceptor/composeContext.ts`
-- `extension/content/interceptor/sendTrigger.ts`
-- `extension/content/ui/modal.ts`
-- `extension/content/ui/focusTrap.ts`
+### Extension layout
 
-Deliverables:
-- Reliable Gmail send interception.
-- Pause modal trigger path (including confirm/cancel behavior).
-- Final integration of settings + smart delay + send handoff.
+```
+extension/
+├── manifest.json
+├── content/
+│   ├── content.entry.ts        # Gmail bootstrap
+│   ├── outlook.entry.ts        # Outlook bootstrap
+│   ├── interceptor/
+│   │   ├── intercept.ts              # Gmail click + keyboard listener
+│   │   ├── outlookIntercept.ts       # Outlook click + pointerdown + keyboard listener
+│   │   ├── composeContext.ts         # Extract Gmail ComposeContext from DOM
+│   │   ├── outlookContext.ts         # Extract Outlook ComposeContext from DOM
+│   │   ├── sendTrigger.ts            # Gmail send button + bypass marker
+│   │   └── outlookSendTrigger.ts     # Outlook send button + bypass marker
+│   ├── settings/
+│   │   ├── defaults.ts         # PauseSettings type + DEFAULT_SETTINGS
+│   │   ├── storage.ts          # chrome.storage.local helpers
+│   │   ├── smartPause.ts       # computePauseAnalysis — orchestrates all checks
+│   │   ├── languageTool.ts     # LanguageTool API client
+│   │   └── toneRules.ts        # Profanity word list
+│   └── ui/
+│       ├── modal.ts            # Countdown modal DOM + timer logic
+│       ├── focusTrap.ts        # Keyboard focus trap
+│       └── styles.css          # All modal CSS (micro-pause-* BEM classes)
+└── popup/
+    ├── popup.html
+    ├── popup.ts                # Settings form logic
+    └── popup.css
+```
 
-### Kevin (Popup + Storage)
+### Send interception flow
 
-Own files:
-- `extension/popup/popup.html`
-- `extension/popup/popup.ts`
-- `extension/popup/popup.css`
-- `extension/content/settings/defaults.ts`
-- `extension/content/settings/storage.ts`
+```
+User clicks Send / presses Ctrl+Enter
+          │
+          ▼
+  Listener fires at capture phase
+  (prevents default immediately)
+          │
+          ▼
+  WeakSet lock acquired for compose window
+  (prevents re-entrant interception)
+          │
+          ▼
+  getSettings()  ──── extension disabled? ──▶  trigger native send, exit
+          │
+          ▼
+  buildComposeContext()   ← reads DOM (recipients, subject, body, attachments)
+          │
+          ▼
+  computePauseAnalysis()  ← async; fires LanguageTool + local checks in parallel
+          │
+          ▼
+  openPauseModal()   ← shows skeleton while analysis resolves
+     │         │
+     │    analysis resolves ──▶ swap skeleton → issue summaries
+     │
+  User action / timer expiry
+     │
+     ├── "Keep Editing" / Escape ──▶ modal closes, no send
+     │
+     └── "Send Now" / timer = 0 ──▶ SEND_BYPASS_ATTR set on send button
+                                     ──▶ button.click() fires
+                                     ──▶ interceptor sees bypass marker, ignores
+                                     ──▶ Gmail/Outlook processes native send
+```
 
-Deliverables:
-- Settings form for enable/delay/smart-pause/keywords.
-- Persist/read from `chrome.storage.local`.
-- Validation + normalization compatible with shared interfaces.
+### Build system
 
-### Vinci (Smart Rules + UI Polish)
+Vite bundles the popup (`extension/popup/popup.html` → `dist/popup/`). The two content scripts (`content.entry.ts`, `outlook.entry.ts`) are compiled separately by **esbuild** as **IIFEs** — Chrome content scripts must be classic scripts with no ESM `import`/`export`. The esbuild step runs inside Vite's `closeBundle` hook alongside static asset copying.
 
-Own files:
-- `extension/content/settings/smartPause.ts`
-- `extension/content/ui/styles.css`
+**Output layout in `dist/`:**
 
-Deliverables:
-- Delay rules and reasons logic.
-- Modal appearance polish and accessibility improvements.
+```
+dist/
+├── manifest.json
+├── popup/
+│   └── popup.js
+├── content/
+│   ├── content.entry.js     ← Gmail IIFE
+│   ├── outlook.entry.js     ← Outlook IIFE
+│   └── ui/
+│       └── styles.css
+└── assets/
+    └── icons/
+```
 
-## Branch Workflow (Parallel, Low Conflict)
+### Key types
 
-1. Start:
-   - `git checkout main`
-   - `git pull`
-   - `git checkout <your-branch>`
-2. Install:
-   - `pnpm install --frozen-lockfile`
-3. Work only in owned files.
-4. Validate before push:
-   - `pnpm build`
-   - `pnpm lint`
-5. Keep branch current:
-   - `git fetch origin`
-   - `git rebase origin/main`
-6. Open Draft PR early; keep PR focused to assigned module.
-7. Merge order:
-   - `kevin` -> `vinci` -> `matthew`
+```typescript
+// defaults.ts
+type PauseSettings = {
+  enabled: boolean;
+  delaySeconds: number;        // 0–60, default 20
+  checkGrammar: boolean;
+  checkFormatting: boolean;
+  strictness: "balanced" | "strict";
+  customDictionary: string[];
+};
 
-## Dev/Test Workflow
+// smartPause.ts
+type PauseAnalysis = {
+  delaySeconds: number;
+  summaries: AnalysisSummary[];
+  issuesByCategory: Record<"grammar" | "formatting" | "tone" | "context", AnalysisIssue[]>;
+};
 
-1. Build:
-   - `pnpm build`
-2. Load extension:
-   - Open `chrome://extensions`
-   - Enable Developer Mode
-   - Load unpacked -> `dist/`
-3. Iterate:
-   - Run watch build: `pnpm dev`
-   - Click extension "Reload" in `chrome://extensions`
-   - Refresh Gmail tab
-4. Baseline smoke test:
-   - Popup saves settings.
-   - Gmail send shows countdown modal.
-   - Confirm sends; cancel keeps draft.
+// composeContext.ts / outlookContext.ts
+type ComposeContext = {
+  toCount: number;
+  hasAttachment: boolean;
+  subject: string;
+  bodyText: string;
+  bodyRaw: string;
+  bodyBlocks: BodyBlock[];
+};
+```
+
+---
+
+## Tech Stack
+
+| | |
+|---|---|
+| Language | TypeScript (strict, ES2022, Chrome 114+) |
+| Bundler | Vite (popup) + esbuild (content scripts) |
+| Package manager | pnpm |
+| Grammar API | LanguageTool public API |
+| Profanity library | leo-profanity |
+| Extension API | Chrome Manifest V3, `chrome.storage.local` |
