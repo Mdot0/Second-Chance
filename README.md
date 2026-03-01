@@ -6,6 +6,14 @@ A Manifest V3 Chrome extension that intercepts email sends on **Gmail** and **Ou
 
 ---
 
+## Why?
+
+Have you ever hit Send and immediately noticed a typo in the subject line? Accidentally left a placeholder in the body? Forgotten to attach the file you mentioned? Sent a reply-all to the entire company when you meant to reply only to one person?
+
+We've all been there. Email is permanent — once it's sent, it's gone. Second Chance gives you a short window after every send to catch those mistakes before they reach anyone's inbox. It's not about slowing you down; it's about giving yourself the few seconds you never knew you needed.
+
+---
+
 ## Features
 
 ### Countdown Pause Modal
@@ -17,14 +25,6 @@ Every time you hit Send (click or Ctrl/Cmd+Enter), Second Chance intercepts the 
 - Timer urgency changes colour as it counts down (low → medium → high)
 
 ### Intelligent Delay Scaling
-
-The countdown timer grows dynamically based on what was found in the email:
-
-| Issue severity | Weight added to delay |
-|---|---|
-| High | +3 s per issue |
-| Medium | +2 s per issue |
-| Low | +1 s per issue |
 
 Selecting **Strict** mode applies a ×1.35 multiplier on top of the weighted delay. The total is always clamped between 0 and 60 seconds.
 
