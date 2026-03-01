@@ -52,7 +52,7 @@ function createSummaryRow(
 
     const details = document.createElement("ul");
     details.className = "micro-pause-details-list";
-    details.hidden = true;
+    details.style.display = "none";
 
     issues.forEach((issue) => {
       const item = document.createElement("li");
@@ -64,7 +64,7 @@ function createSummaryRow(
       const expanded = toggle.getAttribute("aria-expanded") === "true";
       toggle.setAttribute("aria-expanded", expanded ? "false" : "true");
       toggle.textContent = expanded ? "View details" : "Hide details";
-      details.hidden = expanded;
+      details.style.display = expanded ? "none" : "grid";
     });
 
     row.append(toggle, details);
