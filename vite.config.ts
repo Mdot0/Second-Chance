@@ -10,8 +10,12 @@ function copyExtensionStatic() {
       const dist = resolve(__dirname, "dist");
       const contentTarget = resolve(dist, "content");
       const stylesTarget = resolve(dist, "content/ui");
+      const backgroundTarget = resolve(dist, "background");
+      const offscreenTarget = resolve(dist, "offscreen");
       mkdirSync(contentTarget, { recursive: true });
       mkdirSync(stylesTarget, { recursive: true });
+      mkdirSync(backgroundTarget, { recursive: true });
+      mkdirSync(offscreenTarget, { recursive: true });
 
       // Chrome content scripts are classic scripts, so bundle as IIFE (no import/export).
       await esbuildBuild({
@@ -28,8 +32,38 @@ function copyExtensionStatic() {
         entryNames: "[name]"
       });
 
+      // Background service worker — IIFE, registers listeners on execution.
+      await esbuildBuild({
+        entryPoints: [resolve(__dirname, "extension/background/background.ts")],
+        bundle: true,
+        format: "iife",
+        platform: "browser",
+        target: "chrome116",
+        minify: true,
+        outfile: resolve(backgroundTarget, "background.js")
+      });
+
+      // Offscreen document — ESM so WebLLM's dynamic imports are preserved correctly.
+      // `url` is marked external because WebLLM's bundle contains a dead Node.js branch
+      // (`typeof process !== 'undefined' ? require('url') : ...`) that esbuild tries to
+      // resolve even though it never executes in the browser.
+      await esbuildBuild({
+        entryPoints: [resolve(__dirname, "extension/offscreen/offscreen.ts")],
+        bundle: true,
+        format: "esm",
+        platform: "browser",
+        target: "chrome116",
+        minify: true,
+        external: ["url"],
+        outfile: resolve(offscreenTarget, "offscreen.js")
+      });
+
       cpSync(resolve(__dirname, "extension/manifest.json"), resolve(dist, "manifest.json"));
       cpSync(resolve(__dirname, "extension/content/ui/styles.css"), resolve(stylesTarget, "styles.css"));
+      cpSync(
+        resolve(__dirname, "extension/offscreen/offscreen.html"),
+        resolve(offscreenTarget, "offscreen.html")
+      );
 
       const iconsSrc = resolve(__dirname, "extension/assets/icons");
       if (existsSync(iconsSrc)) {

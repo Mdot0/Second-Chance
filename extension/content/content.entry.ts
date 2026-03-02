@@ -30,6 +30,11 @@ function attemptNativeSendWithButton(
 
 if (!w.__MICRO_PAUSE_BOOTED__) {
   w.__MICRO_PAUSE_BOOTED__ = true;
+
+  // Pre-warm the offscreen LLM document as soon as the page loads so the
+  // model is ready (or closer to ready) by the time the user clicks send.
+  chrome.runtime.sendMessage({ type: "WARMUP" }).catch(() => {});
+
   const activeComposeLocks = new WeakSet<HTMLElement>();
 
   startSendInterception(async ({ composeRoot, sendButton, trigger }) => {

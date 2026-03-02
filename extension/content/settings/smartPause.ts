@@ -1,6 +1,7 @@
 import { MAX_DELAY_SECONDS, MIN_DELAY_SECONDS, type PauseSettings } from "./defaults";
 import { fetchLanguageToolIssues } from "./languageTool";
-import { PROFANITY } from "./toneRules";
+import { fetchLLMIssues } from "./llmAnalysis";
+import { PROFANITY, VAGUE_SIGNALS } from "./toneRules";
 import type { ComposeContext } from "../interceptor/composeContext";
 import leoProfanity from "leo-profanity";
 
@@ -50,7 +51,7 @@ export type PauseAnalysis = {
 const HEADLINES: Record<IssueCategory, string> = {
   grammar: "Grammar needs to be fixed",
   formatting: "Formatting should be cleaned up",
-  tone: "Profanity or offensive language detected",
+  tone: "Tone or language issues detected",
   context: "Generalized context suggests a quick review"
 };
 
@@ -262,6 +263,19 @@ function runFormattingChecks(context: ComposeContext, issueMap: Record<IssueCate
   }
 }
 
+function runVagueLanguageChecks(context: ComposeContext, issueMap: Record<IssueCategory, AnalysisIssue[]>): void {
+  const body = context.bodyRaw.toLowerCase();
+  const found = VAGUE_SIGNALS.filter((phrase) => body.includes(phrase));
+  if (found.length >= 2) {
+    addIssue(issueMap, {
+      category: "tone",
+      severity: "low",
+      message: `Vague or uncommitted language detected: ${found.slice(0, 3).map((p) => `"${p}"`).join(", ")}. Consider more direct phrasing.`,
+      location: "body"
+    });
+  }
+}
+
 function runProfanityChecks(context: ComposeContext, issueMap: Record<IssueCategory, AnalysisIssue[]>): void {
   const subjectRaw = context.subject.toLowerCase();
   const bodyRaw = context.bodyRaw.toLowerCase();
@@ -338,31 +352,38 @@ export async function computePauseAnalysis(context: ComposeContext, settings: Pa
 
   runContextChecks(context, issueMap);
 
-  if (settings.checkGrammar) {
-    const ltIssues = (
-      await Promise.all([
-        context.subject.trim().length > 0
-          ? fetchLanguageToolIssues(context.subject, settings.customDictionary, "subject")
-          : Promise.resolve([]),
-        context.bodyRaw.trim().length > 0
-          ? fetchLanguageToolIssues(context.bodyRaw, settings.customDictionary, "body")
-          : Promise.resolve([])
-      ])
-    )
-      .flat()
-      .filter((issue) => !isCommaSpacingAcrossLineBreak(issue, context.bodyRaw));
-    ltIssues.forEach((issue) => addIssue(issueMap, issue));
-  }
+  // LanguageTool and LLM run in parallel — neither blocks the other.
+  const [ltIssues, llmIssues] = await Promise.all([
+    settings.checkGrammar
+      ? Promise.all([
+          context.subject.trim().length > 0
+            ? fetchLanguageToolIssues(context.subject, settings.customDictionary, "subject")
+            : Promise.resolve([]),
+          context.bodyRaw.trim().length > 0
+            ? fetchLanguageToolIssues(context.bodyRaw, settings.customDictionary, "body")
+            : Promise.resolve([])
+        ]).then((results) =>
+          results
+            .flat()
+            .filter((issue) => !isCommaSpacingAcrossLineBreak(issue, context.bodyRaw))
+        )
+      : Promise.resolve([]),
+    settings.llmEnabled ? fetchLLMIssues(context, settings.llmMode) : Promise.resolve([])
+  ]);
+
+  ltIssues.forEach((issue) => addIssue(issueMap, issue));
+  llmIssues.forEach((issue) => addIssue(issueMap, issue));
 
   if (settings.checkFormatting) {
     runFormattingChecks(context, issueMap);
   }
   runProfanityChecks(context, issueMap);
+  runVagueLanguageChecks(context, issueMap);
 
   const delaySeconds = calculateDelay(
     settings.delaySeconds,
     issueMap,
-    settings.strictness === "strict"
+    settings.llmMode === "deep"
   );
 
   return {

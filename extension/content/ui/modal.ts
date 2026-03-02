@@ -1,4 +1,4 @@
-import type { AnalysisIssue, IssueSeverity, PauseAnalysis } from "../settings/smartPause";
+import type { AnalysisIssue, IssueCategory, IssueSeverity, PauseAnalysis } from "../settings/smartPause";
 import { createFocusTrap } from "./focusTrap";
 
 export type PauseModalOptions = {
@@ -14,13 +14,22 @@ type ActiveModalController = {
 
 let activeModal: ActiveModalController | null = null;
 
+// One-line explanation shown below the bold headline so users know *why* this matters
+// without having to click into details.
+const CATEGORY_DESCRIPTIONS: Record<IssueCategory, string> = {
+  grammar: "Errors were found that may affect clarity or professionalism.",
+  formatting: "Inconsistent formatting may distract from your message.",
+  tone: "Language choices here could affect how your message is received.",
+  context: "Some details may need a second look before hitting send."
+};
+
 function labelForCount(count: number): string {
   return count === 1 ? "1 issue" : `${count} issues`;
 }
 
 function issueLine(issue: AnalysisIssue): string {
-  const prefix = issue.location ? `[${issue.location === "subject" ? "Subject" : "Body"}] ` : "";
-  return `${prefix}${issue.message}`;
+  // Only label subject-line issues — body is the default/implied location.
+  return issue.location === "subject" ? `Subject: ${issue.message}` : issue.message;
 }
 
 function worstSeverity(issues: AnalysisIssue[]): IssueSeverity | null {
@@ -30,7 +39,7 @@ function worstSeverity(issues: AnalysisIssue[]): IssueSeverity | null {
   return null;
 }
 
-function createSummaryRow(headline: string, issues: AnalysisIssue[]): HTMLElement {
+function createSummaryRow(category: IssueCategory, headline: string, issues: AnalysisIssue[]): HTMLElement {
   const row = document.createElement("div");
   row.className = "micro-pause-summary-row";
 
@@ -39,47 +48,52 @@ function createSummaryRow(headline: string, issues: AnalysisIssue[]): HTMLElemen
     row.dataset.severity = severity;
   }
 
+  // Bold headline + optional issue count badge.
   const heading = document.createElement("div");
   heading.className = "micro-pause-summary-headline";
   heading.textContent = headline;
 
-  const count = document.createElement("span");
-  count.className = "micro-pause-summary-count";
-  count.textContent = labelForCount(issues.length);
-
   const headerLine = document.createElement("div");
   headerLine.className = "micro-pause-summary-header";
-  headerLine.append(heading, count);
+  headerLine.append(heading);
 
-  row.append(headerLine);
-
-  if (issues.length > 0) {
-    const toggle = document.createElement("button");
-    toggle.type = "button";
-    toggle.className = "micro-pause-details-toggle";
-    toggle.textContent = "View details";
-    toggle.setAttribute("aria-expanded", "false");
-
-    const details = document.createElement("ul");
-    details.className = "micro-pause-details-list";
-
-    issues.forEach((issue) => {
-      const item = document.createElement("li");
-      item.textContent = issueLine(issue);
-      item.dataset.severity = issue.severity;
-      details.append(item);
-    });
-
-    toggle.addEventListener("click", () => {
-      const expanded = toggle.getAttribute("aria-expanded") === "true";
-      toggle.setAttribute("aria-expanded", expanded ? "false" : "true");
-      toggle.textContent = expanded ? "View details" : "Hide details";
-      details.classList.toggle("micro-pause-details-list--open", !expanded);
-    });
-
-    row.append(toggle, details);
+  if (issues.length > 1) {
+    const count = document.createElement("span");
+    count.className = "micro-pause-summary-count";
+    count.textContent = labelForCount(issues.length);
+    headerLine.append(count);
   }
 
+  // Non-bold subtitle explaining why this category matters.
+  const description = document.createElement("p");
+  description.className = "micro-pause-summary-description";
+  description.textContent = CATEGORY_DESCRIPTIONS[category];
+
+  // "View details" always present — expands to show specific suggestions.
+  const toggle = document.createElement("button");
+  toggle.type = "button";
+  toggle.className = "micro-pause-details-toggle";
+  toggle.textContent = "View details";
+  toggle.setAttribute("aria-expanded", "false");
+
+  const details = document.createElement("ul");
+  details.className = "micro-pause-details-list";
+
+  issues.forEach((issue) => {
+    const item = document.createElement("li");
+    item.textContent = issueLine(issue);
+    item.dataset.severity = issue.severity;
+    details.append(item);
+  });
+
+  toggle.addEventListener("click", () => {
+    const expanded = toggle.getAttribute("aria-expanded") === "true";
+    toggle.setAttribute("aria-expanded", expanded ? "false" : "true");
+    toggle.textContent = expanded ? "View details" : "Hide details";
+    details.classList.toggle("micro-pause-details-list--open", !expanded);
+  });
+
+  row.append(headerLine, description, toggle, details);
   return row;
 }
 
@@ -120,7 +134,7 @@ function buildContextSection(analysis: PauseAnalysis): HTMLElement {
   }
 
   analysis.summaries.forEach((summary) => {
-    section.append(createSummaryRow(summary.headline, analysis.issuesByCategory[summary.category]));
+    section.append(createSummaryRow(summary.category, summary.headline, analysis.issuesByCategory[summary.category]));
   });
 
   return section;

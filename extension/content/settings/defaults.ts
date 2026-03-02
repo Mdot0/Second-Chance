@@ -1,12 +1,13 @@
-export type StrictnessMode = "balanced" | "strict";
+export type LLMMode = "fast" | "both" | "deep";
 
 export type PauseSettings = {
   enabled: boolean;
   delaySeconds: number;
   checkGrammar: boolean;
   checkFormatting: boolean;
-  strictness: StrictnessMode;
+  llmMode: LLMMode;
   customDictionary: string[];
+  llmEnabled: boolean;
 };
 
 export const SETTINGS_KEY = "microPauseSettings";
@@ -18,6 +19,7 @@ export const DEFAULT_SETTINGS: PauseSettings = {
   delaySeconds: 20,
   checkGrammar: true,
   checkFormatting: true,
-  strictness: "balanced",
-  customDictionary: []
+  llmMode: "both",
+  customDictionary: [],
+  llmEnabled: true
 };

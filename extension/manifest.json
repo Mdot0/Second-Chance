@@ -3,15 +3,24 @@
   "name": "Second Chance",
   "version": "0.1.0",
   "description": "Adds a timed pause before sending Gmail and Outlook messages.",
-  "permissions": ["storage"],
+  "permissions": ["storage", "offscreen", "alarms"],
   "host_permissions": [
     "https://mail.google.com/*",
     "https://outlook.live.com/*",
     "https://outlook.office.com/*",
     "https://outlook.office365.com/*",
     "https://outlook.cloud.microsoft/*",
-    "https://api.languagetool.org/*"
+    "https://api.languagetool.org/*",
+    "https://huggingface.co/*",
+    "https://cdn-lfs.huggingface.co/*",
+    "https://cdn-lfs-us-1.huggingface.co/*"
   ],
+  "content_security_policy": {
+    "extension_pages": "script-src 'self' 'wasm-unsafe-eval'; object-src 'self';"
+  },
+  "background": {
+    "service_worker": "background/background.js"
+  },
   "icons": {
     "16": "assets/icons/icon16.png",
     "32": "assets/icons/icon32.png",

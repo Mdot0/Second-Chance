@@ -3,6 +3,23 @@ export type ProfanityEntry = {
   severity: "medium" | "high";
 };
 
+// Two or more of these in a single email body trigger a low-severity tone warning.
+export const VAGUE_SIGNALS: string[] = [
+  "maybe",
+  "possibly",
+  "perhaps",
+  "potentially",
+  "or whatever",
+  "no pressure",
+  "i guess",
+  "i suppose",
+  "kind of",
+  "sort of",
+  "if that works",
+  "not sure if",
+  "just wondering"
+];
+
 export const PROFANITY: ProfanityEntry[] = [
   { word: "fuck", severity: "high" },
   { word: "fucking", severity: "high" },

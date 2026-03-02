@@ -1,6 +1,6 @@
 import { DEFAULT_SETTINGS, MAX_DELAY_SECONDS, MIN_DELAY_SECONDS } from "../content/settings/defaults";
 import { getSettings, onSettingsChange, setSettings } from "../content/settings/storage";
-import type { PauseSettings } from "../content/settings/defaults";
+import type { LLMMode, PauseSettings } from "../content/settings/defaults";
 
 type Elements = {
   form: HTMLFormElement;
@@ -8,7 +8,10 @@ type Elements = {
   delaySeconds: HTMLInputElement;
   checkGrammar: HTMLInputElement;
   checkFormatting: HTMLInputElement;
-  strictness: HTMLSelectElement;
+  llmEnabled: HTMLInputElement;
+  llmModeFast: HTMLInputElement;
+  llmModeBoth: HTMLInputElement;
+  llmModeDeep: HTMLInputElement;
   status: HTMLParagraphElement;
   delayReadout: HTMLSpanElement;
   resetBtn: HTMLButtonElement;
@@ -20,7 +23,10 @@ function getElements(): Elements {
   const delaySeconds = document.getElementById("delaySeconds");
   const checkGrammar = document.getElementById("checkGrammar");
   const checkFormatting = document.getElementById("checkFormatting");
-  const strictness = document.getElementById("strictness");
+  const llmEnabled = document.getElementById("llmEnabled");
+  const llmModeFast = document.getElementById("llmMode-fast");
+  const llmModeBoth = document.getElementById("llmMode-both");
+  const llmModeDeep = document.getElementById("llmMode-deep");
   const status = document.getElementById("status");
   const delayReadout = document.getElementById("delay-readout");
   const resetBtn = document.getElementById("resetBtn");
@@ -31,7 +37,10 @@ function getElements(): Elements {
     !(delaySeconds instanceof HTMLInputElement) ||
     !(checkGrammar instanceof HTMLInputElement) ||
     !(checkFormatting instanceof HTMLInputElement) ||
-    !(strictness instanceof HTMLSelectElement) ||
+    !(llmEnabled instanceof HTMLInputElement) ||
+    !(llmModeFast instanceof HTMLInputElement) ||
+    !(llmModeBoth instanceof HTMLInputElement) ||
+    !(llmModeDeep instanceof HTMLInputElement) ||
     !(status instanceof HTMLParagraphElement) ||
     !(delayReadout instanceof HTMLSpanElement) ||
     !(resetBtn instanceof HTMLButtonElement)
@@ -45,7 +54,10 @@ function getElements(): Elements {
     delaySeconds,
     checkGrammar,
     checkFormatting,
-    strictness,
+    llmEnabled,
+    llmModeFast,
+    llmModeBoth,
+    llmModeDeep,
     status,
     delayReadout,
     resetBtn
@@ -77,12 +89,26 @@ function updateDelayDisplay(elements: Elements): void {
   elements.delaySeconds.style.background = `linear-gradient(to right, #2563eb ${pct}%, #e2e8f0 ${pct}%)`;
 }
 
+function updateLLMModeVisibility(elements: Elements): void {
+  const row = document.getElementById("llm-mode-row");
+  if (row) {
+    row.style.display = elements.llmEnabled.checked ? "" : "none";
+  }
+}
+
 function applySettings(elements: Elements, settings: PauseSettings): void {
   elements.enabled.checked = settings.enabled;
   elements.delaySeconds.value = String(settings.delaySeconds);
   elements.checkGrammar.checked = settings.checkGrammar;
   elements.checkFormatting.checked = settings.checkFormatting;
-  elements.strictness.value = settings.strictness;
+  elements.llmEnabled.checked = settings.llmEnabled;
+  const modeMap: Record<LLMMode, HTMLInputElement> = {
+    fast: elements.llmModeFast,
+    both: elements.llmModeBoth,
+    deep: elements.llmModeDeep
+  };
+  modeMap[settings.llmMode].checked = true;
+  updateLLMModeVisibility(elements);
   updateDelayDisplay(elements);
 }
 
@@ -104,6 +130,7 @@ async function initPopup(): Promise<void> {
   }
 
   elements.delaySeconds.addEventListener("input", () => updateDelayDisplay(elements));
+  elements.llmEnabled.addEventListener("change", () => updateLLMModeVisibility(elements));
 
   elements.resetBtn.addEventListener("click", async () => {
     try {
@@ -120,12 +147,19 @@ async function initPopup(): Promise<void> {
     event.preventDefault();
 
     try {
+      const llmMode: LLMMode = elements.llmModeDeep.checked
+        ? "deep"
+        : elements.llmModeFast.checked
+          ? "fast"
+          : "both";
+
       const saved = await setSettings({
         enabled: elements.enabled.checked,
         delaySeconds: clampDelay(Number(elements.delaySeconds.value)),
         checkGrammar: elements.checkGrammar.checked,
         checkFormatting: elements.checkFormatting.checked,
-        strictness: elements.strictness.value === "strict" ? "strict" : "balanced"
+        llmEnabled: elements.llmEnabled.checked,
+        llmMode
       });
 
       applySettings(elements, saved);
