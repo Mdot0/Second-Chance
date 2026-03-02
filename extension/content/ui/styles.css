@@ -255,6 +255,14 @@
   width: 60%;
 }
 
+/* ── Category description subtitle ── */
+.micro-pause-summary-description {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.45;
+}
+
 /* ── Severity colors on summary rows ── */
 .micro-pause-summary-row[data-severity="high"] .micro-pause-summary-headline {
   color: #dc2626;

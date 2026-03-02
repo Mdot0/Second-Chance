@@ -43,6 +43,37 @@
             <input id="checkFormatting" type="checkbox" class="toggle-input" />
             <span class="toggle-track" aria-hidden="true"></span>
           </label>
+          <label class="checkbox-field">
+            <span class="checkbox-label">AI analysis <span style="font-size:0.75em;opacity:0.6;">(local · private)</span></span>
+            <input id="llmEnabled" type="checkbox" class="toggle-input" />
+            <span class="toggle-track" aria-hidden="true"></span>
+          </label>
+          <div class="llm-mode-row" id="llm-mode-row">
+            <p class="llm-mode-label">AI model</p>
+            <div class="llm-mode-options" role="group" aria-label="AI model">
+              <label class="llm-mode-option">
+                <input type="radio" name="llmMode" id="llmMode-fast" value="fast" class="llm-mode-input" />
+                <span class="llm-mode-btn">
+                  <span class="llm-mode-name">Fast</span>
+                  <span class="llm-mode-desc">~1-2s</span>
+                </span>
+              </label>
+              <label class="llm-mode-option">
+                <input type="radio" name="llmMode" id="llmMode-both" value="both" class="llm-mode-input" />
+                <span class="llm-mode-btn">
+                  <span class="llm-mode-name">Balanced</span>
+                  <span class="llm-mode-desc">Recommended</span>
+                </span>
+              </label>
+              <label class="llm-mode-option">
+                <input type="radio" name="llmMode" id="llmMode-deep" value="deep" class="llm-mode-input" />
+                <span class="llm-mode-btn">
+                  <span class="llm-mode-name">Accurate</span>
+                  <span class="llm-mode-desc">~4-5s</span>
+                </span>
+              </label>
+            </div>
+          </div>
         </div>
 
         <div class="settings-section">
@@ -53,13 +84,6 @@
               <span id="delay-readout" class="delay-readout" aria-live="polite">20s</span>
             </div>
             <input id="delaySeconds" type="range" min="0" max="60" step="1" />
-          </div>
-          <div class="field field--divided">
-            <label class="field-label" for="strictness">Strictness</label>
-            <select id="strictness">
-              <option value="balanced">Balanced</option>
-              <option value="strict">Strict</option>
-            </select>
           </div>
         </div>
 

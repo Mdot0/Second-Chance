@@ -3,16 +3,16 @@ import {
   MAX_DELAY_SECONDS,
   MIN_DELAY_SECONDS,
   SETTINGS_KEY,
-  type PauseSettings,
-  type StrictnessMode
+  type LLMMode,
+  type PauseSettings
 } from "./defaults";
 
 type LegacySettings = {
   smartPause?: boolean;
 };
 
-function isStrictness(value: unknown): value is StrictnessMode {
-  return value === "balanced" || value === "strict";
+function isLLMMode(value: unknown): value is LLMMode {
+  return value === "fast" || value === "both" || value === "deep";
 }
 
 function normalizeDelay(input: unknown): number {
@@ -39,8 +39,9 @@ export function normalizeSettings(input: unknown): PauseSettings {
     delaySeconds: normalizeDelay(raw.delaySeconds),
     checkGrammar: raw.checkGrammar ?? legacySmartPause,
     checkFormatting: raw.checkFormatting ?? legacySmartPause,
-    strictness: isStrictness(raw.strictness) ? raw.strictness : DEFAULT_SETTINGS.strictness,
-    customDictionary: normalizeCustomDictionary((raw as Partial<PauseSettings>).customDictionary)
+    llmMode: isLLMMode(raw.llmMode) ? raw.llmMode : DEFAULT_SETTINGS.llmMode,
+    customDictionary: normalizeCustomDictionary((raw as Partial<PauseSettings>).customDictionary),
+    llmEnabled: raw.llmEnabled ?? DEFAULT_SETTINGS.llmEnabled
   };
 }
 
